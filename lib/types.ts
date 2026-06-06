@@ -110,6 +110,10 @@ export interface Product {
   lead_time_days: number;
   spec_sheet_url: string | null;
   status: ProductStatus;
+  /** Phase 3: private-label flag + margin metadata (optional; only PB products set these). */
+  is_pb?: boolean;
+  cost?: number | null;
+  margin_rate?: number | null;
   created_at: string;
 }
 
@@ -458,4 +462,138 @@ export interface ScheduleProgress {
   done: number;
   ratio: number;
   nextTask: SiteTask | null;
+}
+
+/* ---------- Phase 3: private label (PB) ---------- */
+
+export interface PbProduct {
+  id: string;
+  product_id: string;
+  sku: string;
+  category_id: string;
+  cost: number;
+  margin_rate: number;
+  supplier_id: string;
+  created_at: string;
+}
+
+export interface PbCandidate {
+  categoryId: string;
+  categoryName: string;
+  totalQty: number;
+  orderCount: number;
+  avgPrice: number;
+  estMarginRate: number;
+  score: number;
+  rank: number;
+}
+
+/** Demand row aggregated from order_items for PB recommendation. */
+export interface CategoryDemand {
+  categoryId: string;
+  categoryName: string;
+  totalQty: number;
+  orderCount: number;
+  avgPrice: number;
+}
+
+/* ---------- Phase 3: group buy (공동구매) ---------- */
+
+export interface GroupBuyTier {
+  minQty: number;
+  unitPrice: number;
+}
+
+export type GroupBuyStatus = "open" | "closed" | "cancelled";
+
+export interface GroupBuy {
+  id: string;
+  product_id: string;
+  supplier_id: string;
+  title: string;
+  start_at: string;
+  end_at: string;
+  min_qty: number;
+  tiers: GroupBuyTier[];
+  status: GroupBuyStatus;
+  joined_qty: number;
+  final_unit_price: number | null;
+  created_at: string;
+}
+
+export interface GroupBuyJoin {
+  id: string;
+  group_buy_id: string;
+  contractor_id: string;
+  qty: number;
+  created_at: string;
+}
+
+export interface GroupBuyOrderIntent {
+  contractorId: string;
+  qty: number;
+  unitPrice: number;
+  amount: number;
+}
+
+export interface GroupBuyCloseResult {
+  status: "closed" | "cancelled";
+  finalUnitPrice: number | null;
+  totalQty: number;
+  reason?: string;
+  orders: GroupBuyOrderIntent[];
+}
+
+/* ---------- Phase 3: finance ---------- */
+
+export type SettlementStmtStatus = "draft" | "issued" | "paid" | "disputed";
+
+export interface ContractorSettlement {
+  id: string;
+  contractor_id: string;
+  period: string; // YYYY-MM
+  gross: number;
+  fee: number;
+  net: number;
+  status: SettlementStmtStatus;
+  created_at: string;
+}
+
+export interface MonthlySettlementResult {
+  period: string;
+  gross: number;
+  fee: number;
+  net: number;
+  orderIds: string[];
+}
+
+export type TaxInvoiceStatus = "pending" | "issued" | "failed";
+
+export interface TaxInvoice {
+  id: string;
+  settlement_id: string;
+  provider: string;
+  provider_invoice_id: string | null;
+  status: TaxInvoiceStatus;
+  pdf_url: string | null;
+  created_at: string;
+}
+
+export interface CreditAccount {
+  id: string;
+  contractor_id: string;
+  limit_amount: number;
+  used_amount: number;
+  overdue_amount: number;
+  due_date: string | null;
+  created_at: string;
+}
+
+export interface CreditStatus {
+  limit: number;
+  used: number;
+  available: number;
+  overdue: number;
+  blocked: boolean;
+  reason: string | null;
 }

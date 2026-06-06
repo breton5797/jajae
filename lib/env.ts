@@ -39,3 +39,15 @@ export function tossClientKey(): string {
     process.env.NEXT_PUBLIC_TOSS_CLIENT_KEY ?? "test_ck_docs_placeholder_000000"
   );
 }
+
+export function popbillLinkId(): string | null {
+  return process.env.POPBILL_LINK_ID ?? null;
+}
+
+export function popbillSecretKey(): string | null {
+  return process.env.POPBILL_SECRET_KEY ?? null;
+}
+
+export function popbillConfigured(): boolean {
+  return Boolean(popbillLinkId() && popbillSecretKey());
+}

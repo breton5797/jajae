@@ -9,10 +9,16 @@ import {
   canUseCredit,
   applyCreditUsage,
 } from "@/lib/settlement";
+import { canPlaceCreditOrder } from "@/lib/finance";
 import { confirmTossPayment } from "@/lib/payments/toss";
 import { createServerSupabase, createServiceSupabase } from "@/lib/supabase/server";
 import { PLATFORM_FEE_RATE } from "@/lib/env";
-import type { Product, Profile, ResolvedCartLine } from "@/lib/types";
+import type {
+  CreditAccount,
+  Product,
+  Profile,
+  ResolvedCartLine,
+} from "@/lib/types";
 
 export const dynamic = "force-dynamic";
 
@@ -96,6 +102,18 @@ export async function POST(req: Request) {
       const credit = canUseCredit(prof, split.total);
       if (!credit.ok) {
         return NextResponse.json({ error: credit.error }, { status: 402 });
+      }
+      // Phase 3: a credit account with overdue balance blocks new credit orders.
+      const { data: account } = await sb
+        .from("credit_accounts")
+        .select("*")
+        .eq("contractor_id", user.id)
+        .maybeSingle();
+      if (account) {
+        const gate = canPlaceCreditOrder(account as CreditAccount, split.total);
+        if (!gate.ok) {
+          return NextResponse.json({ error: gate.error }, { status: 402 });
+        }
       }
     } else {
       const pay = await confirmTossPayment(

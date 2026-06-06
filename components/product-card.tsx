@@ -23,6 +23,11 @@ export function ProductCard({
             href={`/catalog/${product.id}`}
             className="line-clamp-2 text-sm font-semibold hover:text-brand"
           >
+            {product.is_pb && (
+              <Badge variant="default" className="mr-1 align-middle">
+                PB
+              </Badge>
+            )}
             {product.name}
           </Link>
           {product.stock <= 0 ? (
