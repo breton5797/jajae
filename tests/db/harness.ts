@@ -5,19 +5,20 @@
  * + JWT-claim GUC — the same mechanism PostgREST uses in production.
  */
 import { PGlite } from "@electric-sql/pglite";
-import { readFileSync } from "node:fs";
+import { readFileSync, readdirSync } from "node:fs";
 import { join } from "node:path";
 import type { SqlExecutor } from "@/lib/orders";
 
 const ROOT = process.cwd();
-const MIGRATIONS = [
-  "supabase/migrations/0001_schema.sql",
-  "supabase/migrations/0002_rls.sql",
-  "supabase/migrations/0003_grants.sql",
-];
+const MIGRATIONS_DIR = "supabase/migrations";
+// Apply every migration in lexical order, so new migrations auto-apply in tests.
+const MIGRATIONS = readdirSync(join(ROOT, MIGRATIONS_DIR))
+  .filter((f) => f.endsWith(".sql"))
+  .sort()
+  .map((f) => `${MIGRATIONS_DIR}/${f}`);
 const SEED = "supabase/seed.sql";
 
-const AUTH_SHIM = `
+export const AUTH_SHIM = `
 create schema if not exists auth;
 create table if not exists auth.users (id uuid primary key, email text);
 create or replace function auth.uid() returns uuid

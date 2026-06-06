@@ -25,8 +25,18 @@
           },
           {
             "target": "./lib/ai-quote",
-            "from": ["./lib/orders", "./lib/settlement"],
-            "message": "lib/ai-quote must not depend on orders/settlement."
+            "from": ["./lib/orders", "./lib/settlement", "./lib/pricing", "./lib/projects"],
+            "message": "lib/ai-quote must not depend on orders/settlement/pricing/projects."
+          },
+          {
+            "target": "./lib/pricing",
+            "from": ["./lib/orders", "./lib/settlement", "./lib/ai-quote", "./lib/catalog", "./lib/projects"],
+            "message": "lib/pricing must not depend on other domain modules."
+          },
+          {
+            "target": "./lib/projects",
+            "from": ["./lib/orders", "./lib/settlement", "./lib/ai-quote", "./lib/catalog", "./lib/pricing"],
+            "message": "lib/projects must not depend on other domain modules."
           }
         ]
       }

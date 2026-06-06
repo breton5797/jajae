@@ -13,4 +13,10 @@ export async function generateBom(input: BomInput): Promise<BomResult> {
 
 export { generateBomDeterministic } from "./bom";
 export { matchBomToProducts } from "./match";
-export { BomInputSchema, type BomInputParsed } from "./schema";
+export {
+  BomInputSchema,
+  type BomInputParsed,
+  DrawingAnalyzeSchema,
+} from "./schema";
+export { analyzeDrawing, extractRoomsWithVision } from "./drawing";
+export { bomFromRooms, roomsToBomInput, totalArea } from "./rooms-bom";

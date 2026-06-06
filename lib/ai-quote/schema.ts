@@ -37,3 +37,41 @@ export const AiBomLineSchema = z.object({
 export const AiBomSchema = z.object({
   lines: z.array(AiBomLineSchema).min(1),
 });
+
+/* ---------- drawing analysis ---------- */
+
+export const RoomTypeSchema = z.enum([
+  "living",
+  "room",
+  "bathroom",
+  "kitchen",
+  "balcony",
+  "entrance",
+  "other",
+]);
+
+export const RoomAreaSchema = z.object({
+  name: z.string().min(1),
+  type: z.string().min(1),
+  areaM2: z.number().nonnegative().max(100_000),
+});
+
+export const RoomsSchema = z.object({
+  rooms: z.array(RoomAreaSchema).min(1),
+});
+
+export const DrawingAnalyzeSchema = z.object({
+  imageBase64: z.string().optional(),
+  mimeType: z.string().optional(),
+  rooms: z
+    .array(
+      z.object({
+        name: z.string().min(1),
+        type: RoomTypeSchema,
+        areaM2: z.number().positive().max(100_000),
+      }),
+    )
+    .optional(),
+  specLevel: SpecLevelSchema,
+  projectType: ProjectTypeSchema.optional(),
+});

@@ -18,6 +18,8 @@ import {
   deliveryVariant,
 } from "@/lib/labels";
 import { loadContractorDashboard } from "@/lib/data/dashboard";
+import { loadDashboardWidgets } from "@/lib/data/widgets";
+import { BudgetBar } from "@/components/budget-bar";
 import type { Delivery } from "@/lib/types";
 
 function EmptyState({ text }: { text: string }) {
@@ -31,6 +33,7 @@ function fmtDate(iso: string | null): string {
 
 export default async function DashboardPage() {
   const d = await loadContractorDashboard();
+  const w = await loadDashboardWidgets();
 
   if (!d.authed) {
     return (
@@ -68,6 +71,66 @@ export default async function DashboardPage() {
   return (
     <div className="mx-auto max-w-3xl px-4 py-8">
       <h1 className="mb-6 text-xl font-bold">대시보드</h1>
+
+      {/* Phase 2 인텔리전스 위젯 */}
+      <div className="mb-4 grid grid-cols-1 gap-3 sm:grid-cols-3">
+        <Card>
+          <CardHeader>
+            <CardTitle className="text-sm">전체 예산 소진</CardTitle>
+          </CardHeader>
+          <CardContent>
+            <BudgetBar
+              budget={{
+                budget: w.totalBudget,
+                spent: w.totalSpent,
+                remaining: w.totalBudget - w.totalSpent,
+                burnRatio: w.burnRatio,
+                overBudget: w.totalSpent > w.totalBudget && w.totalBudget > 0,
+              }}
+            />
+          </CardContent>
+        </Card>
+        <Card>
+          <CardHeader>
+            <CardTitle className="text-sm">배송 예정</CardTitle>
+          </CardHeader>
+          <CardContent>
+            <p className="text-2xl font-bold">
+              {w.pendingDeliveries.length}
+              <span className="ml-1 text-sm font-normal text-gray-500">건</span>
+            </p>
+          </CardContent>
+        </Card>
+        <Card>
+          <CardHeader>
+            <CardTitle className="text-sm">최저가 알림</CardTitle>
+          </CardHeader>
+          <CardContent>
+            {w.alerts.length === 0 ? (
+              <p className="text-sm text-gray-500">절감 기회 없음</p>
+            ) : (
+              <ul className="space-y-1 text-xs">
+                {w.alerts.slice(0, 3).map((a) => (
+                  <li key={a.productId}>
+                    {a.productName} →{" "}
+                    <span className="font-semibold text-brand-700">
+                      {formatKRW(a.savings)} 절감
+                    </span>{" "}
+                    ({a.savingsPct}%)
+                  </li>
+                ))}
+              </ul>
+            )}
+            <Link
+              href="/price-intelligence"
+              className="mt-1 inline-block text-xs text-brand hover:underline"
+            >
+              가격 비교 →
+            </Link>
+          </CardContent>
+        </Card>
+      </div>
+
       <div className="flex flex-col gap-4">
         {/* (1) 주문 현황 */}
         <Card>

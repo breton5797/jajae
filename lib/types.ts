@@ -122,6 +122,9 @@ export interface Site {
   lng: number | null;
   scheduled_date: string | null;
   memo: string | null;
+  budget: number;
+  start_date: string | null;
+  end_date: string | null;
   created_at: string;
 }
 
@@ -317,4 +320,142 @@ export interface StagedDelivery {
   leadTimeDays: number;
   productIds: string[];
   isBackorder: boolean;
+}
+
+/* ---------- Phase 2: drawing-based BOM ---------- */
+
+export type RoomType =
+  | "living"
+  | "room"
+  | "bathroom"
+  | "kitchen"
+  | "balcony"
+  | "entrance"
+  | "other";
+
+export interface RoomArea {
+  name: string;
+  type: RoomType;
+  areaM2: number;
+}
+
+export interface DrawingAnalysisInput {
+  /** base64 image (PNG/JPG) for Claude vision */
+  imageBase64?: string;
+  mimeType?: string;
+  /** manual / fallback room list (skips vision) */
+  rooms?: RoomArea[];
+  specLevel: SpecLevel;
+  projectType?: ProjectType;
+}
+
+export interface DrawingAnalysisResult {
+  rooms: RoomArea[];
+  totalAreaM2: number;
+  bom: BomResult;
+  source: "ai" | "manual";
+}
+
+export interface Drawing {
+  id: string;
+  contractor_id: string;
+  site_id: string | null;
+  file_path: string;
+  file_type: string;
+  status: "uploaded" | "analyzed" | "failed";
+  rooms: RoomArea[];
+  bom: BomResult | Record<string, never>;
+  created_at: string;
+}
+
+/* ---------- Phase 2: price intelligence ---------- */
+
+export interface PriceComparisonRow {
+  productId: string;
+  productName: string;
+  brand: string;
+  supplierId: string;
+  unitPrice: number;
+  stock: number;
+  leadTimeDays: number;
+  isLowest: boolean;
+  savingsVsMax: number;
+}
+
+export interface PriceComparison {
+  categoryId: string;
+  rows: PriceComparisonRow[];
+  min: number;
+  max: number;
+  median: number;
+  count: number;
+}
+
+export interface PriceTrendPoint {
+  date: string;
+  price: number;
+}
+
+export interface PriceHistory {
+  id: string;
+  product_id: string;
+  supplier_id: string;
+  unit_price: number;
+  recorded_at: string;
+}
+
+export interface LowestPriceAlert {
+  productId: string;
+  productName: string;
+  paidPrice: number;
+  cheaperProductId: string;
+  cheaperProductName: string;
+  cheaperPrice: number;
+  savings: number;
+  savingsPct: number;
+}
+
+/* ---------- Phase 2: project (현장) workspace ---------- */
+
+export interface SiteDocument {
+  id: string;
+  site_id: string;
+  contractor_id: string;
+  name: string;
+  file_path: string;
+  file_type: string;
+  created_at: string;
+}
+
+export interface SiteTask {
+  id: string;
+  site_id: string;
+  contractor_id: string;
+  title: string;
+  phase: string;
+  planned_date: string | null;
+  done: boolean;
+  created_at: string;
+}
+
+export interface SiteBudget {
+  budget: number;
+  spent: number;
+  remaining: number;
+  burnRatio: number;
+  overBudget: boolean;
+}
+
+export interface OrderTimelinePoint {
+  orderId: string;
+  date: string;
+  amount: number;
+  cumulative: number;
+}
+
+export interface ScheduleProgress {
+  total: number;
+  done: number;
+  ratio: number;
+  nextTask: SiteTask | null;
 }
