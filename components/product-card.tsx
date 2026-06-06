@@ -2,6 +2,7 @@ import Link from "next/link";
 import { Card, CardContent } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { AddToCartButton } from "@/components/add-to-cart-button";
+import { RatingBadge } from "@/components/rating-badge";
 import { formatKRW } from "@/lib/utils";
 import { UNIT_LABEL } from "@/lib/labels";
 import type { Product } from "@/lib/types";
@@ -9,9 +10,11 @@ import type { Product } from "@/lib/types";
 export function ProductCard({
   product,
   supplierName,
+  supplierRating,
 }: {
   product: Product;
   supplierName?: string;
+  supplierRating?: number;
 }) {
   const unit = UNIT_LABEL[product.unit] ?? product.unit;
   const low = product.stock > 0 && product.stock <= 30;
@@ -36,7 +39,10 @@ export function ProductCard({
             <Badge variant="warning">잔여 {product.stock}</Badge>
           ) : null}
         </div>
-        <p className="text-xs text-muted-foreground">{product.brand}</p>
+        <div className="flex items-center gap-1">
+          <p className="text-xs text-muted-foreground">{product.brand}</p>
+          <RatingBadge composite={supplierRating} />
+        </div>
         <div className="mt-auto">
           <p className="text-base font-bold">
             {formatKRW(product.unit_price)}

@@ -13,6 +13,8 @@ import {
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { AddToCartButton } from "@/components/add-to-cart-button";
+import { ReviewForm } from "@/components/review-form";
+import { loadProductReviews } from "@/lib/data/community";
 import { UNIT_LABEL } from "@/lib/labels";
 import { formatKRW } from "@/lib/utils";
 
@@ -46,6 +48,7 @@ export default async function ProductPage({
   const unitLabel = UNIT_LABEL[product.unit] ?? product.unit;
   const inStock = product.stock > 0;
   const specRows = Object.entries(product.spec);
+  const { reviews, aggregate } = await loadProductReviews(params.productId);
 
   return (
     <div className="mx-auto max-w-3xl px-4 py-6">
@@ -119,6 +122,43 @@ export default async function ProductPage({
         <CardFooter>
           <AddToCartButton product={product} className="w-full sm:w-auto" />
         </CardFooter>
+      </Card>
+
+      {/* Reviews + AI summary */}
+      <Card className="mt-4">
+        <CardHeader className="gap-1">
+          <CardTitle className="flex items-center gap-2 text-lg">
+            상품 리뷰
+            {aggregate.count > 0 && (
+              <span className="text-base font-normal text-neutral-500">
+                ★ {aggregate.avg} ({aggregate.count})
+              </span>
+            )}
+          </CardTitle>
+          <CardDescription>
+            <span className="font-medium text-brand-700">AI 요약:</span>{" "}
+            {aggregate.summary}
+          </CardDescription>
+        </CardHeader>
+        <CardContent className="flex flex-col gap-4">
+          <ReviewForm productId={product.id} />
+          <ul className="flex flex-col gap-3">
+            {reviews.length === 0 && (
+              <li className="text-sm text-neutral-400">첫 리뷰를 남겨보세요.</li>
+            )}
+            {reviews.map((rv) => (
+              <li key={rv.id} className="rounded-lg border p-3">
+                <div className="mb-1 text-sm font-semibold text-amber-500">
+                  {"★".repeat(rv.rating)}
+                  <span className="text-neutral-300">
+                    {"★".repeat(5 - rv.rating)}
+                  </span>
+                </div>
+                <p className="text-sm text-neutral-700">{rv.body}</p>
+              </li>
+            ))}
+          </ul>
+        </CardContent>
       </Card>
     </div>
   );

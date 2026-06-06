@@ -1,7 +1,11 @@
 export const dynamic = "force-dynamic";
 
 import Link from "next/link";
-import { loadCategoryTree, loadProducts } from "@/lib/data/catalog";
+import {
+  loadCategoryTree,
+  loadProducts,
+  loadSupplierRatingMap,
+} from "@/lib/data/catalog";
 import { ProductCard } from "@/components/product-card";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -18,6 +22,7 @@ export default async function CatalogPage({
     categoryId: searchParams.category,
     q: searchParams.q,
   });
+  const ratingMap = await loadSupplierRatingMap();
 
   const activeCategory = searchParams.category;
 
@@ -78,7 +83,11 @@ export default async function CatalogPage({
       ) : (
         <div className="grid grid-cols-2 gap-3 sm:grid-cols-3">
           {products.map((p) => (
-            <ProductCard key={p.id} product={p} />
+            <ProductCard
+              key={p.id}
+              product={p}
+              supplierRating={ratingMap.get(p.supplier_id)}
+            />
           ))}
         </div>
       )}

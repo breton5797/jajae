@@ -12,6 +12,7 @@ import {
   Users,
   Receipt,
   FileImage,
+  MessageSquare,
 } from "lucide-react";
 import { useCart } from "@/lib/store/cart";
 import { cn } from "@/lib/utils";
@@ -21,6 +22,7 @@ const NAV = [
   { href: "/drawing", label: "도면견적", icon: FileImage },
   { href: "/ai-quote", label: "AI견적", icon: Sparkles },
   { href: "/group-buy", label: "공동구매", icon: Users },
+  { href: "/community", label: "커뮤니티", icon: MessageSquare },
   { href: "/price-intelligence", label: "시세", icon: TrendingUp },
   { href: "/sites", label: "현장", icon: Building2 },
   { href: "/finance", label: "정산", icon: Receipt },

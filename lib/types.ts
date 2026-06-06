@@ -129,6 +129,7 @@ export interface Site {
   budget: number;
   start_date: string | null;
   end_date: string | null;
+  region: string;
   created_at: string;
 }
 
@@ -596,4 +597,136 @@ export interface CreditStatus {
   overdue: number;
   blocked: boolean;
   reason: string | null;
+}
+
+/* ---------- Phase 4: logistics ---------- */
+
+export type RunStatus = "planned" | "confirmed" | "dispatched" | "completed";
+export type PoTrackStatus = "ready" | "dispatched" | "delivered";
+
+export interface OpenPoForBatching {
+  poId: string;
+  supplierId: string;
+  siteId: string | null;
+  region: string;
+  date: string;
+  lat: number | null;
+  lng: number | null;
+}
+
+export interface RunStop {
+  poId: string;
+  siteId: string | null;
+  sequence: number;
+  lat: number | null;
+  lng: number | null;
+}
+
+export interface DeliveryRunProposal {
+  region: string;
+  date: string;
+  stops: RunStop[];
+  poCount: number;
+  singlePo: boolean;
+}
+
+export interface DeliveryWindow {
+  siteId: string;
+  date: string;
+  poIds: string[];
+  windowLabel: string;
+}
+
+export interface DeliveryRun {
+  id: string;
+  region: string;
+  run_date: string;
+  route: { stops: RunStop[] } | Record<string, never>;
+  status: RunStatus;
+  created_at: string;
+}
+
+export interface RunPo {
+  id: string;
+  run_id: string;
+  po_id: string;
+  sequence: number;
+}
+
+/* ---------- Phase 4: supplier ratings ---------- */
+
+export type RatingTier = "최우수" | "우수" | "양호" | "주의" | "신규";
+
+export interface SupplierRatingMetrics {
+  deliveredOnTime: number;
+  deliveredTotal: number;
+  returns: number;
+  asCount: number;
+  orderCount: number;
+  qualityReviews: number[];
+}
+
+export interface SupplierRating {
+  onTime: number; // 0..1
+  returnRate: number; // 0..1
+  qualityAvg: number; // 0..5
+  composite: number; // 0..5
+  orderCount: number;
+  reviewCount: number;
+  tier: RatingTier;
+}
+
+export interface SupplierRatingRow {
+  id: string;
+  supplier_id: string;
+  on_time: number;
+  return_rate: number;
+  quality_avg: number;
+  composite: number;
+  order_count: number;
+  review_count: number;
+  updated_at: string;
+}
+
+/* ---------- Phase 4: community ---------- */
+
+export interface Review {
+  id: string;
+  product_id: string;
+  contractor_id: string;
+  rating: number;
+  body: string;
+  photos: string[];
+  created_at: string;
+}
+
+export interface ReviewAggregate {
+  count: number;
+  avg: number;
+  distribution: number[]; // index 0..4 → ratings 1..5
+  summary: string;
+  summarySource: "ai" | "fallback";
+}
+
+export type CommunityPostType = "thread" | "qna" | "notice";
+
+export interface CommunityPost {
+  id: string;
+  contractor_id: string;
+  type: CommunityPostType;
+  title: string;
+  body: string;
+  created_at: string;
+}
+
+export type ReferralStatus = "invited" | "joined" | "rewarded" | "void";
+
+export interface Referral {
+  id: string;
+  inviter_id: string;
+  invitee_id: string | null;
+  code: string;
+  reward: number;
+  status: ReferralStatus;
+  created_at: string;
 }

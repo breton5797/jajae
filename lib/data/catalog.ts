@@ -44,6 +44,22 @@ export async function loadProducts(query: CatalogQuery = {}): Promise<Product[]>
   }
 }
 
+/** supplier_id → public composite rating (suppliers.rating) for catalog badges. */
+export async function loadSupplierRatingMap(): Promise<Map<string, number>> {
+  try {
+    const sb = createServerSupabase();
+    const { data } = await sb.from("suppliers").select("id, rating");
+    return new Map(
+      ((data ?? []) as Array<{ id: string; rating: number }>).map((s) => [
+        s.id,
+        Number(s.rating),
+      ]),
+    );
+  } catch {
+    return new Map();
+  }
+}
+
 export async function loadProduct(id: string): Promise<Product | null> {
   try {
     const sb = createServerSupabase();

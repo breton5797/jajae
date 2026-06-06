@@ -52,6 +52,21 @@
             "target": "./lib/finance",
             "from": ["./lib/orders", "./lib/settlement", "./lib/ai-quote", "./lib/catalog", "./lib/pricing", "./lib/projects", "./lib/pb", "./lib/groupbuy"],
             "message": "lib/finance must not depend on other domain modules."
+          },
+          {
+            "target": "./lib/logistics",
+            "from": ["./lib/orders", "./lib/settlement", "./lib/ai-quote", "./lib/catalog", "./lib/pricing", "./lib/projects", "./lib/pb", "./lib/groupbuy", "./lib/finance", "./lib/ratings", "./lib/community"],
+            "message": "lib/logistics must not depend on other domain modules."
+          },
+          {
+            "target": "./lib/ratings",
+            "from": ["./lib/orders", "./lib/settlement", "./lib/ai-quote", "./lib/catalog", "./lib/pricing", "./lib/projects", "./lib/pb", "./lib/groupbuy", "./lib/finance", "./lib/logistics", "./lib/community"],
+            "message": "lib/ratings must not depend on other domain modules."
+          },
+          {
+            "target": "./lib/community",
+            "from": ["./lib/orders", "./lib/settlement", "./lib/ai-quote", "./lib/catalog", "./lib/pricing", "./lib/projects", "./lib/pb", "./lib/groupbuy", "./lib/finance", "./lib/logistics", "./lib/ratings"],
+            "message": "lib/community must not depend on other domain modules."
           }
         ]
       }
