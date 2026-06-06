@@ -730,3 +730,133 @@ export interface Referral {
   status: ReferralStatus;
   created_at: string;
 }
+
+/* ---------- Phase 5: demand forecast & auto-reorder ---------- */
+
+export interface PeriodDemand {
+  period: string; // YYYY-MM
+  qty: number;
+}
+
+export type ForecastMethod = "seasonal" | "movingAvg" | "coldStart";
+
+export interface ForecastResult {
+  predictedQty: number;
+  confidence: number; // 0..1
+  method: ForecastMethod;
+  coldStart: boolean;
+}
+
+export interface Forecast {
+  id: string;
+  product_id: string;
+  period: string;
+  predicted_qty: number;
+  confidence: number;
+  method: string;
+  created_at: string;
+}
+
+export interface ReorderRule {
+  id: string;
+  contractor_id: string;
+  product_id: string;
+  threshold: number; // safety stock (units)
+  lead_time_days: number;
+  enabled: boolean;
+  created_at: string;
+}
+
+export interface ReorderSuggestion {
+  productId: string;
+  currentStock: number;
+  reorderPoint: number;
+  needsReorder: boolean;
+  suggestedQty: number;
+}
+
+export interface ReorderDraftLine {
+  productId: string;
+  qty: number;
+}
+
+/* ---------- Phase 5: B2B2C client portal ---------- */
+
+export interface ClientUser {
+  id: string;
+  phone: string;
+  kakao_id: string | null;
+  name: string;
+  created_at: string;
+}
+
+export type ProjectClientRole = "viewer" | "selector";
+
+export interface ProjectClient {
+  id: string;
+  site_id: string;
+  client_user_id: string;
+  role: ProjectClientRole;
+  created_at: string;
+}
+
+/** Client-safe material option (NO supplier cost / PB margin). */
+export interface ClientSelectionOption {
+  id: string;
+  productId: string;
+  label: string;
+  unitPrice: number;
+  imageUrl?: string;
+  note?: string;
+}
+
+export type ClientSelectionStatus = "open" | "chosen" | "declined";
+
+export interface ClientSelection {
+  id: string;
+  site_id: string;
+  title: string;
+  option_set: ClientSelectionOption[];
+  chosen: string[]; // chosen option ids
+  status: ClientSelectionStatus;
+  created_at: string;
+}
+
+/** Client-safe BOM/quote line (no cost, supplier, or margin). */
+export interface ClientSafeLine {
+  item: string;
+  category: string;
+  qty: number;
+  unit: ProductUnit;
+  clientPrice: number;
+}
+
+/* ---------- Phase 5: owner analytics ---------- */
+
+export interface AnalyticsSnapshot {
+  id: string;
+  period: string;
+  gmv: number;
+  margin: number;
+  pb_share: number;
+  repeat_rate: number;
+  forecast_accuracy: number;
+  data: Record<string, unknown>;
+  created_at: string;
+}
+
+export interface SupplierPerf {
+  supplierId: string;
+  orders: number;
+  value: number;
+}
+
+export interface AnalyticsResult {
+  period: string;
+  gmv: number;
+  margin: number;
+  pbShare: number;
+  repeatRate: number;
+  forecastAccuracy: number;
+  supplierPerf: SupplierPerf[];
+}

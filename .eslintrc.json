@@ -67,6 +67,21 @@
             "target": "./lib/community",
             "from": ["./lib/orders", "./lib/settlement", "./lib/ai-quote", "./lib/catalog", "./lib/pricing", "./lib/projects", "./lib/pb", "./lib/groupbuy", "./lib/finance", "./lib/logistics", "./lib/ratings"],
             "message": "lib/community must not depend on other domain modules."
+          },
+          {
+            "target": "./lib/forecast",
+            "from": ["./lib/orders", "./lib/settlement", "./lib/ai-quote", "./lib/catalog", "./lib/pricing", "./lib/projects", "./lib/pb", "./lib/groupbuy", "./lib/finance", "./lib/logistics", "./lib/ratings", "./lib/community", "./lib/client-portal", "./lib/analytics"],
+            "message": "lib/forecast must not depend on other domain modules."
+          },
+          {
+            "target": "./lib/client-portal",
+            "from": ["./lib/orders", "./lib/settlement", "./lib/ai-quote", "./lib/catalog", "./lib/pricing", "./lib/projects", "./lib/pb", "./lib/groupbuy", "./lib/finance", "./lib/logistics", "./lib/ratings", "./lib/community", "./lib/forecast", "./lib/analytics"],
+            "message": "lib/client-portal must not depend on other domain modules."
+          },
+          {
+            "target": "./lib/analytics",
+            "from": ["./lib/orders", "./lib/settlement", "./lib/ai-quote", "./lib/catalog", "./lib/pricing", "./lib/projects", "./lib/pb", "./lib/groupbuy", "./lib/finance", "./lib/logistics", "./lib/ratings", "./lib/community", "./lib/forecast", "./lib/client-portal"],
+            "message": "lib/analytics must not depend on other domain modules."
           }
         ]
       }

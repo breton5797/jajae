@@ -63,3 +63,15 @@ export function ok<T>(value: T): Result<T, never> {
 export function err<E>(error: E): Result<never, E> {
   return { ok: false, error };
 }
+
+/** Forecast accuracy = 1 - MAPE (clamped 0..1) over predicted/actual pairs. */
+export function forecastAccuracy(
+  pairs: Array<{ predicted: number; actual: number }>,
+): number {
+  const valid = pairs.filter((p) => p.actual > 0);
+  if (valid.length === 0) return 0;
+  const mape =
+    valid.reduce((s, p) => s + Math.abs(p.actual - p.predicted) / p.actual, 0) /
+    valid.length;
+  return Math.max(0, Math.min(1, Math.round((1 - mape) * 100) / 100));
+}

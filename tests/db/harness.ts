@@ -55,6 +55,8 @@ export interface TestDb {
   seedUser(opts: SeedUserOpts): Promise<string>;
   /** Link a supplier row to an owner profile. */
   linkSupplier(supplierId: string, ownerId: string): Promise<void>;
+  /** Create a lightweight end-client (auth user + client_users, NO profile). */
+  seedClientUser(opts: { id?: string; phone: string; name?: string }): Promise<string>;
   close(): Promise<void>;
 }
 
@@ -136,9 +138,36 @@ export async function createTestDb(): Promise<TestDb> {
     ]);
   };
 
+  const seedClientUser = async (opts: {
+    id?: string;
+    phone: string;
+    name?: string;
+  }): Promise<string> => {
+    await asService();
+    const id = opts.id ?? uuid();
+    await db.query("insert into auth.users (id, email) values ($1,$2)", [
+      id,
+      `${opts.phone}@client.local`,
+    ]);
+    await db.query(
+      "insert into client_users (id, phone, name) values ($1,$2,$3)",
+      [id, opts.phone, opts.name ?? "입주민"],
+    );
+    return id;
+  };
+
   const close = async () => {
     await db.close();
   };
 
-  return { db, executor, asUser, asService, seedUser, linkSupplier, close };
+  return {
+    db,
+    executor,
+    asUser,
+    asService,
+    seedUser,
+    linkSupplier,
+    seedClientUser,
+    close,
+  };
 }
