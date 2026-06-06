@@ -1,0 +1,36 @@
+{
+  "root": true,
+  "parser": "@typescript-eslint/parser",
+  "plugins": ["@typescript-eslint", "import"],
+  "extends": ["next/core-web-vitals"],
+  "rules": {
+    "import/no-restricted-paths": [
+      "error",
+      {
+        "zones": [
+          {
+            "target": "./lib/catalog",
+            "from": ["./lib/orders", "./lib/settlement", "./lib/ai-quote"],
+            "message": "lib/catalog must not depend on other domain modules."
+          },
+          {
+            "target": "./lib/orders",
+            "from": ["./lib/settlement", "./lib/ai-quote", "./lib/catalog/server.ts"],
+            "message": "lib/orders may use shared types only, not other domain modules."
+          },
+          {
+            "target": "./lib/settlement",
+            "from": ["./lib/orders", "./lib/ai-quote", "./lib/catalog"],
+            "message": "lib/settlement must not depend on other domain modules."
+          },
+          {
+            "target": "./lib/ai-quote",
+            "from": ["./lib/orders", "./lib/settlement"],
+            "message": "lib/ai-quote must not depend on orders/settlement."
+          }
+        ]
+      }
+    ]
+  },
+  "ignorePatterns": ["node_modules", ".next", "supabase", "*.config.*"]
+}
