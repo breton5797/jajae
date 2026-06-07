@@ -1066,3 +1066,120 @@ export interface AuditLogEntry {
   detail: Record<string, unknown>;
   created_at: string;
 }
+
+/* ---------- Phase 7: autonomous procurement & fulfillment ---------- */
+
+export interface AgentPolicy {
+  id: string;
+  contractor_id: string;
+  spend_cap: number;
+  supplier_allowlist: string[];
+  max_po: number;
+  escalation_threshold: number;
+  category_limits: Record<string, number>;
+  enabled: boolean;
+  created_at: string;
+}
+
+export interface PlanItem {
+  productId: string;
+  supplierId: string;
+  qty: number;
+  amount: number;
+  categoryId?: string;
+  rationale: string;
+}
+
+export interface AgentPlan {
+  items: PlanItem[];
+  summary: string;
+  source: "ai" | "deterministic";
+}
+
+export type PolicyDecision = "auto" | "escalate" | "reject" | "halt";
+
+export interface PolicyEval {
+  item: PlanItem;
+  decision: PolicyDecision;
+  reasons: string[];
+}
+
+export interface PolicyEvalResult {
+  evals: PolicyEval[];
+  autoItems: PlanItem[];
+  escalateItems: PlanItem[];
+  rejectedItems: PlanItem[];
+  totalAuto: number;
+  halted: boolean;
+}
+
+export type AgentDecisionStatus =
+  | "pending"
+  | "auto_executed"
+  | "escalated"
+  | "approved"
+  | "rejected";
+
+export interface AgentDecision {
+  id: string;
+  contractor_id: string;
+  input: Record<string, unknown>;
+  plan: Record<string, unknown>;
+  action: string;
+  rationale: string;
+  status: AgentDecisionStatus;
+  created_at: string;
+}
+
+export interface AgentAction {
+  id: string;
+  decision_id: string;
+  po_id: string | null;
+  executed_at: string;
+  reversible_until: string;
+  reversed: boolean;
+}
+
+export interface Hub {
+  id: string;
+  name: string;
+  location: string;
+  lat: number | null;
+  lng: number | null;
+  capacity: number;
+  created_at: string;
+}
+
+export interface HubInventory {
+  id: string;
+  hub_id: string;
+  product_id: string;
+  qty: number;
+}
+
+export type FulfillmentSource = "hub" | "dropship";
+
+export interface FulfillmentRoute {
+  id: string;
+  order_id: string;
+  source_type: FulfillmentSource;
+  hub_id: string | null;
+  eta: string;
+  status: string;
+  created_at: string;
+}
+
+export interface RouteDecision {
+  source: FulfillmentSource;
+  hubId: string | null;
+  etaDays: number;
+  reason: string;
+}
+
+export interface AgentOpsStats {
+  autoPoCount: number;
+  autoPoValue: number;
+  escalations: number;
+  escalationRate: number;
+  interventions: number;
+}

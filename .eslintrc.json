@@ -97,6 +97,21 @@
             "target": "./lib/scoring",
             "from": ["./lib/orders", "./lib/settlement", "./lib/ai-quote", "./lib/catalog", "./lib/pricing", "./lib/projects", "./lib/pb", "./lib/groupbuy", "./lib/finance", "./lib/logistics", "./lib/ratings", "./lib/community", "./lib/forecast", "./lib/client-portal", "./lib/analytics", "./lib/openapi", "./lib/erp"],
             "message": "lib/scoring must not depend on other domain modules."
+          },
+          {
+            "target": "./lib/agent",
+            "from": ["./lib/orders", "./lib/settlement", "./lib/ai-quote", "./lib/catalog", "./lib/pricing", "./lib/projects", "./lib/pb", "./lib/groupbuy", "./lib/finance", "./lib/logistics", "./lib/ratings", "./lib/community", "./lib/forecast", "./lib/client-portal", "./lib/analytics", "./lib/openapi", "./lib/erp", "./lib/scoring", "./lib/policy", "./lib/fulfillment"],
+            "message": "lib/agent must not depend on other domain modules."
+          },
+          {
+            "target": "./lib/policy",
+            "from": ["./lib/orders", "./lib/settlement", "./lib/ai-quote", "./lib/catalog", "./lib/pricing", "./lib/projects", "./lib/pb", "./lib/groupbuy", "./lib/finance", "./lib/logistics", "./lib/ratings", "./lib/community", "./lib/forecast", "./lib/client-portal", "./lib/analytics", "./lib/openapi", "./lib/erp", "./lib/scoring", "./lib/agent", "./lib/fulfillment"],
+            "message": "lib/policy must not depend on other domain modules."
+          },
+          {
+            "target": "./lib/fulfillment",
+            "from": ["./lib/orders", "./lib/settlement", "./lib/ai-quote", "./lib/catalog", "./lib/pricing", "./lib/projects", "./lib/pb", "./lib/groupbuy", "./lib/finance", "./lib/logistics", "./lib/ratings", "./lib/community", "./lib/forecast", "./lib/client-portal", "./lib/analytics", "./lib/openapi", "./lib/erp", "./lib/scoring", "./lib/agent", "./lib/policy"],
+            "message": "lib/fulfillment must not depend on other domain modules."
           }
         ]
       }

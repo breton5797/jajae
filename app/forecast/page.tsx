@@ -33,11 +33,16 @@ export default async function ForecastPage() {
 
   return (
     <div className="space-y-4">
-      <div>
-        <h1 className="text-xl font-bold">수요예측·자동발주</h1>
-        <p className="text-sm text-muted-foreground">
-          판매 이력 기반 예측으로 재발주 시점을 미리 알려드립니다.
-        </p>
+      <div className="flex items-end justify-between gap-2">
+        <div>
+          <h1 className="text-xl font-bold">수요예측·자동발주</h1>
+          <p className="text-sm text-muted-foreground">
+            판매 이력 기반 예측으로 재발주 시점을 미리 알려드립니다.
+          </p>
+        </div>
+        <Button variant="outline" size="sm" asChild>
+          <Link href="/agent">자동 발주 에이전트 →</Link>
+        </Button>
       </div>
 
       <Card>

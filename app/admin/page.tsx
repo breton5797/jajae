@@ -44,9 +44,23 @@ export default async function AdminPage() {
   return (
     <main className="mx-auto max-w-3xl px-4 py-8">
       <h1 className="mb-1 text-xl font-bold">관리자 콘솔</h1>
-      <p className="mb-6 text-sm text-gray-500">
+      <p className="mb-4 text-sm text-gray-500">
         승인 처리는 관리자 API를 통해 수행됩니다. (MVP 조회 화면)
       </p>
+
+      <div className="mb-6 grid grid-cols-2 gap-2 sm:grid-cols-3">
+        {[
+          { href: "/admin/pb", label: "PB 추천" },
+          { href: "/admin/logistics", label: "배송 배차" },
+          { href: "/admin/analytics", label: "애널리틱스" },
+          { href: "/admin/hubs", label: "물류 허브" },
+          { href: "/admin/agent-ops", label: "에이전트 현황" },
+        ].map((l) => (
+          <Button key={l.href} variant="outline" size="sm" asChild>
+            <Link href={l.href}>{l.label}</Link>
+          </Button>
+        ))}
+      </div>
 
       <div className="flex flex-col gap-4">
         {/* (1) 공급사 인증 대기 */}
