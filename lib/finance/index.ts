@@ -4,7 +4,9 @@
 import type {
   CreditAccount,
   CreditStatus,
+  EarlyPayout,
   MonthlySettlementResult,
+  RepaymentNetResult,
 } from "@/lib/types";
 import { won, type Result, ok, err } from "@/lib/utils";
 
@@ -105,4 +107,59 @@ export function isOverdue(
 ): boolean {
   if (!account.due_date || account.used_amount <= 0) return false;
   return asOf > account.due_date;
+}
+
+/* ---------- Phase 6: embedded finance (early settlement / financing) ---------- */
+
+/** Early-settlement (선정산) advance on a receivable: fee = receivable × rate. */
+export function computeEarlyPayout(receivable: number, rate: number): EarlyPayout {
+  const fee = won(receivable * rate);
+  return { receivable: won(receivable), rate, fee, advance: won(receivable) - fee };
+}
+
+/**
+ * Gate a finance request by the score-derived limit and account health.
+ * Over-limit or overdue/default blocks new financing.
+ */
+export function canRequestFinance(
+  amount: number,
+  opts: { limit: number; outstanding: number; overdue: boolean; eligible: boolean },
+): Result<{ remaining: number }> {
+  if (!opts.eligible) return err("신용 등급이 금융 이용 기준에 미달합니다.");
+  if (opts.overdue) return err("연체/미상환 잔액이 있어 신규 금융이 제한됩니다.");
+  const remaining = opts.limit - opts.outstanding;
+  if (amount > remaining) {
+    return err(
+      `금융 한도를 초과했습니다. 잔여 한도 ${won(remaining)}원, 요청 ${won(amount)}원`,
+    );
+  }
+  return ok({ remaining: remaining - amount });
+}
+
+/** Outstanding balance of a finance request = principal + fee - repayments. */
+export function financeOutstanding(
+  amount: number,
+  fee: number,
+  repayments: number[],
+): number {
+  const repaid = repayments.reduce((s, r) => s + r, 0);
+  return Math.max(0, won(amount + fee - repaid));
+}
+
+/**
+ * Net a settlement against an outstanding finance balance. Repayment is capped
+ * at the balance (repayment-exceeds-balance edge → remainder returned to payee).
+ */
+export function netRepayment(
+  balance: number,
+  settlementAmount: number,
+): RepaymentNetResult {
+  const applied = Math.min(Math.max(0, balance), Math.max(0, settlementAmount));
+  const remainingBalance = won(balance - applied);
+  return {
+    applied: won(applied),
+    remainingBalance,
+    settlementRemainder: won(settlementAmount - applied),
+    fullyRepaid: remainingBalance === 0,
+  };
 }

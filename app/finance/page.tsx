@@ -44,6 +44,15 @@ export default async function FinancePage() {
     <div className="space-y-4">
       <h1 className="text-xl font-bold">정산·여신</h1>
 
+      <div className="grid grid-cols-2 gap-3">
+        <Button variant="outline" asChild>
+          <Link href="/financing">선정산·금융 →</Link>
+        </Button>
+        <Button variant="outline" asChild>
+          <Link href="/partner">개발자 API →</Link>
+        </Button>
+      </div>
+
       <Card>
         <CardHeader>
           <CardTitle>여신(외상) 현황</CardTitle>

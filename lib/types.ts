@@ -860,3 +860,209 @@ export interface AnalyticsResult {
   forecastAccuracy: number;
   supplierPerf: SupplierPerf[];
 }
+
+/* ---------- Phase 6: Open API ---------- */
+
+export type ApiScope =
+  | "products:read"
+  | "orders:read"
+  | "pos:read"
+  | "inventory:write"
+  | "settlements:read";
+
+export type ApiClientStatus = "active" | "revoked";
+
+export interface ApiClient {
+  id: string;
+  partner_id: string;
+  name: string;
+  key_hash: string;
+  key_prefix: string;
+  scopes: string[];
+  status: ApiClientStatus;
+  rate_limit: number;
+  created_at: string;
+}
+
+export interface ApiKeyPair {
+  key: string;
+  hash: string;
+  prefix: string;
+}
+
+export interface ApiLog {
+  id: string;
+  client_id: string;
+  endpoint: string;
+  method: string;
+  status: number;
+  ts: string;
+}
+
+export interface RateLimitResult {
+  allowed: boolean;
+  remaining: number;
+  limit: number;
+}
+
+export type WebhookEventType =
+  | "order.created"
+  | "po.fulfilled"
+  | "settlement.closed";
+
+export interface Webhook {
+  id: string;
+  client_id: string;
+  event: WebhookEventType;
+  url: string;
+  secret: string;
+  active: boolean;
+  created_at: string;
+}
+
+export type WebhookDeliveryStatus = "pending" | "delivered" | "failed" | "dead";
+
+export interface WebhookDelivery {
+  id: string;
+  webhook_id: string;
+  event: string;
+  status: WebhookDeliveryStatus;
+  attempts: number;
+  last_attempt_at: string | null;
+  payload: Record<string, unknown>;
+}
+
+export interface WebhookEventPayload {
+  event: WebhookEventType;
+  id: string;
+  ts: string;
+  data: Record<string, unknown>;
+}
+
+/* ---------- Phase 6: ERP sync ---------- */
+
+export type ErpDirection = "inbound" | "outbound";
+
+export interface ErpSync {
+  id: string;
+  supplier_id: string;
+  direction: ErpDirection;
+  external_id: string;
+  last_sync: string | null;
+  status: string;
+  version: number;
+}
+
+export interface ErpStockUpdate {
+  externalId: string;
+  productId: string;
+  stock: number;
+  unitPrice: number;
+  version: number;
+}
+
+export interface ReconcileResult {
+  apply: boolean;
+  reason: "applied" | "stale" | "noop";
+  next: { stock: number; unit_price: number; version: number } | null;
+}
+
+/* ---------- Phase 6: credit scoring ---------- */
+
+export type ScoreGrade = "AAA" | "AA" | "A" | "B" | "C" | "NEW";
+
+export interface ScoreMetrics {
+  orderCount: number;
+  gmv: number;
+  onTimeSettlementRate: number; // 0..1
+  returnRate: number; // 0..1
+  tenureMonths: number;
+}
+
+export interface ScoreFactor {
+  key: string;
+  label: string;
+  value: number;
+  contribution: number; // points contributed (NOT the raw weight)
+}
+
+export interface ScoreResult {
+  score: number; // 0..1000
+  grade: ScoreGrade;
+  factors: ScoreFactor[];
+  coldStart: boolean;
+}
+
+export interface CreditScore {
+  id: string;
+  contractor_id: string;
+  score: number;
+  grade: string;
+  factors: ScoreFactor[];
+  updated_at: string;
+}
+
+/* ---------- Phase 6: embedded finance ---------- */
+
+export type FinanceRequestType = "early_settlement" | "purchase_financing";
+export type FinanceRequestStatus =
+  | "requested"
+  | "approved"
+  | "disbursed"
+  | "repaying"
+  | "settled"
+  | "overdue"
+  | "rejected";
+
+export interface FinanceRequest {
+  id: string;
+  contractor_id: string;
+  type: FinanceRequestType;
+  amount: number;
+  fee: number;
+  rate: number;
+  status: FinanceRequestStatus;
+  due_date: string | null;
+  disbursed_at: string | null;
+  created_at: string;
+}
+
+export interface Repayment {
+  id: string;
+  finance_request_id: string;
+  amount: number;
+  paid_at: string;
+  source: string;
+}
+
+export interface EarlyPayout {
+  receivable: number;
+  rate: number;
+  fee: number;
+  advance: number;
+}
+
+export interface FinanceOffer {
+  eligible: boolean;
+  limit: number;
+  rate: number;
+  reason: string | null;
+}
+
+export interface RepaymentNetResult {
+  applied: number;
+  remainingBalance: number;
+  settlementRemainder: number;
+  fullyRepaid: boolean;
+}
+
+export interface AuditLogEntry {
+  id: string;
+  actor_id: string | null;
+  contractor_id: string | null;
+  action: string;
+  amount: number;
+  ref_id: string | null;
+  detail: Record<string, unknown>;
+  created_at: string;
+}

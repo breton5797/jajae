@@ -82,6 +82,21 @@
             "target": "./lib/analytics",
             "from": ["./lib/orders", "./lib/settlement", "./lib/ai-quote", "./lib/catalog", "./lib/pricing", "./lib/projects", "./lib/pb", "./lib/groupbuy", "./lib/finance", "./lib/logistics", "./lib/ratings", "./lib/community", "./lib/forecast", "./lib/client-portal"],
             "message": "lib/analytics must not depend on other domain modules."
+          },
+          {
+            "target": "./lib/openapi",
+            "from": ["./lib/orders", "./lib/settlement", "./lib/ai-quote", "./lib/catalog", "./lib/pricing", "./lib/projects", "./lib/pb", "./lib/groupbuy", "./lib/finance", "./lib/logistics", "./lib/ratings", "./lib/community", "./lib/forecast", "./lib/client-portal", "./lib/analytics", "./lib/erp", "./lib/scoring"],
+            "message": "lib/openapi must not depend on other domain modules."
+          },
+          {
+            "target": "./lib/erp",
+            "from": ["./lib/orders", "./lib/settlement", "./lib/ai-quote", "./lib/catalog", "./lib/pricing", "./lib/projects", "./lib/pb", "./lib/groupbuy", "./lib/finance", "./lib/logistics", "./lib/ratings", "./lib/community", "./lib/forecast", "./lib/client-portal", "./lib/analytics", "./lib/openapi", "./lib/scoring"],
+            "message": "lib/erp must not depend on other domain modules."
+          },
+          {
+            "target": "./lib/scoring",
+            "from": ["./lib/orders", "./lib/settlement", "./lib/ai-quote", "./lib/catalog", "./lib/pricing", "./lib/projects", "./lib/pb", "./lib/groupbuy", "./lib/finance", "./lib/logistics", "./lib/ratings", "./lib/community", "./lib/forecast", "./lib/client-portal", "./lib/analytics", "./lib/openapi", "./lib/erp"],
+            "message": "lib/scoring must not depend on other domain modules."
           }
         ]
       }
