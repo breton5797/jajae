@@ -3,7 +3,7 @@ import {
   evaluatePlan,
   assertWithinPolicy,
   isKillSwitched,
-  sumNetAutoSpend,
+  sumNetAgentSpend,
 } from "@/lib/policy";
 import type { AgentPolicy, PlanItem } from "@/lib/types";
 
@@ -78,22 +78,22 @@ describe("evaluatePlan", () => {
   });
 });
 
-describe("sumNetAutoSpend", () => {
-  it("nets auto_po against reversals, ignores other actions, floors at 0", () => {
+describe("sumNetAgentSpend", () => {
+  it("counts auto_po AND approve_execute, subtracts reversals, ignores others", () => {
     expect(
-      sumNetAutoSpend([
+      sumNetAgentSpend([
         { action: "auto_po", amount: 1_500_000 },
-        { action: "auto_po", amount: 1_000_000 },
+        { action: "approve_execute", amount: 9_000_000 }, // human-approved agent spend counts
         { action: "reversal", amount: 500_000 },
-        { action: "approve_execute", amount: 9_000_000 }, // human-approved: not autonomous spend
+        { action: "reject", amount: 0 }, // ignored
       ]),
-    ).toBe(2_000_000);
+    ).toBe(10_000_000);
   });
   it("returns 0 for no history", () => {
-    expect(sumNetAutoSpend([])).toBe(0);
+    expect(sumNetAgentSpend([])).toBe(0);
   });
-  it("never goes negative when reversals exceed auto spend", () => {
-    expect(sumNetAutoSpend([{ action: "reversal", amount: 5_000_000 }])).toBe(0);
+  it("never goes negative when reversals exceed spend", () => {
+    expect(sumNetAgentSpend([{ action: "reversal", amount: 5_000_000 }])).toBe(0);
   });
 });
 

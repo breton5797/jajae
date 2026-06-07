@@ -1,13 +1,30 @@
 import { NextResponse } from "next/server";
 import { z } from "zod";
 import { createServerSupabase } from "@/lib/supabase/server";
-import type { AgentDecision, PlanItem } from "@/lib/types";
 
 export const dynamic = "force-dynamic";
 
 const Schema = z.object({ action: z.enum(["approve", "reject"]) });
 
-/** Human-in-the-loop: approve (execute) or reject an escalated agent decision. */
+/** Map an agent RPC error to a friendly status + message (no raw DB leak). */
+function mapRpcError(message: string): { status: number; error: string } {
+  if (/unauthorized/i.test(message)) return { status: 403, error: "권한이 없습니다." };
+  if (/not found/i.test(message)) return { status: 404, error: "결정을 찾을 수 없습니다." };
+  if (/not actionable/i.test(message)) return { status: 409, error: "이미 처리된 결정입니다." };
+  if (/spend_cap/i.test(message))
+    return { status: 422, error: "지출 한도를 초과합니다. 한도를 올리거나 수동 발주하세요." };
+  if (/not configured/i.test(message))
+    return { status: 422, error: "자율 운영 정책이 없습니다." };
+  if (/max_po|allowlist|kill-switch/i.test(message))
+    return { status: 422, error: "정책 위반으로 실행할 수 없습니다." };
+  return { status: 500, error: "처리 중 오류가 발생했습니다." };
+}
+
+/**
+ * Human-in-the-loop: approve (execute) or reject an escalated agent decision.
+ * Delegates to the atomic plpgsql RPCs so the whole order+PO+action either
+ * commits together or rolls back (no orphan rows, no bricked decision).
+ */
 export async function POST(
   req: Request,
   { params }: { params: { id: string } },
@@ -29,83 +46,24 @@ export async function POST(
     } = await sb.auth.getUser();
     if (!user) return NextResponse.json({ error: "로그인이 필요합니다." }, { status: 401 });
 
-    const { data: decRow } = await sb
-      .from("agent_decisions")
-      .select("*")
-      .eq("id", params.id)
-      .maybeSingle();
-    if (!decRow) return NextResponse.json({ error: "결정을 찾을 수 없습니다." }, { status: 404 });
-    const decision = decRow as AgentDecision;
-
-    // Idempotency guard: only an escalated decision is actionable. Without this,
-    // a repeated/retried POST would mint a duplicate order + PO each time.
-    if (decision.status !== "escalated") {
-      return NextResponse.json(
-        { error: "이미 처리된 결정입니다." },
-        { status: 409 },
-      );
-    }
-
     if (parsed.data.action === "reject") {
-      await sb.from("agent_decisions").update({ status: "rejected" }).eq("id", params.id);
-      await sb.from("agent_audit_log").insert({
-        contractor_id: user.id,
-        decision_id: params.id,
-        action: "reject",
-        amount: 0,
-      });
+      const { error } = await sb.rpc("agent_reject_decision", { p_decision_id: params.id });
+      if (error) {
+        const m = mapRpcError(error.message);
+        return NextResponse.json({ error: m.error }, { status: m.status });
+      }
       return NextResponse.json({ status: "rejected" });
     }
 
-    // approve → execute the PO FIRST; only mark 'approved' after the action row
-    // commits. A transient failure mid-sequence then leaves the decision
-    // 'escalated' (retryable) instead of bricking it behind the 409 guard.
-    const item = decision.plan as unknown as PlanItem;
-
-    const { data: order } = await sb
-      .from("orders")
-      .insert({
-        contractor_id: user.id,
-        payment_method: "escrow",
-        status: "pending",
-        subtotal: item.amount,
-        total: item.amount,
-      })
-      .select("id")
-      .single();
-    if (!order) return NextResponse.json({ error: "주문 생성 실패" }, { status: 500 });
-    const { data: po } = await sb
-      .from("purchase_orders")
-      .insert({
-        order_id: order.id,
-        supplier_id: item.supplierId,
-        status: "pending",
-        subtotal: item.amount,
-      })
-      .select("id")
-      .single();
-    if (!po) return NextResponse.json({ error: "발주 생성 실패" }, { status: 500 });
-
-    // The agent_actions insert (unique on decision_id) is the idempotency gate:
-    // if this decision was already executed, it fails here and status stays put.
-    const { error: actErr } = await sb.from("agent_actions").insert({
-      decision_id: params.id,
-      po_id: po.id,
-      reversible_until: new Date(Date.now() + 86_400_000).toISOString(),
+    const { data, error } = await sb.rpc("agent_approve_decision", {
+      p_decision_id: params.id,
+      p_reversible_until: new Date(Date.now() + 86_400_000).toISOString(),
     });
-    if (actErr) {
-      return NextResponse.json({ error: "이미 실행된 결정입니다." }, { status: 409 });
+    if (error) {
+      const m = mapRpcError(error.message);
+      return NextResponse.json({ error: m.error }, { status: m.status });
     }
-
-    await sb.from("agent_decisions").update({ status: "approved" }).eq("id", params.id);
-    await sb.from("agent_audit_log").insert({
-      contractor_id: user.id,
-      decision_id: params.id,
-      action: "approve_execute",
-      amount: item.amount,
-    });
-
-    return NextResponse.json({ status: "approved", poId: po.id });
+    return NextResponse.json({ status: "approved", poId: data });
   } catch (e) {
     return NextResponse.json({ error: (e as Error).message }, { status: 500 });
   }

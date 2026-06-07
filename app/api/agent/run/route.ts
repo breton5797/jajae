@@ -1,9 +1,9 @@
 import { NextResponse } from "next/server";
 import { planReorders, type ReorderSignal } from "@/lib/agent";
-import { evaluatePlan, sumNetAutoSpend } from "@/lib/policy";
+import { evaluatePlan, sumNetAgentSpend } from "@/lib/policy";
 import { createServerSupabase } from "@/lib/supabase/server";
 import { loadReorderOverview } from "@/lib/data/forecast";
-import type { AgentPolicy, PlanItem, Product } from "@/lib/types";
+import type { AgentPolicy, Product } from "@/lib/types";
 
 export const dynamic = "force-dynamic";
 
@@ -48,14 +48,14 @@ export async function POST() {
       .in("id", signals.map((s) => s.productId));
     const plan = planReorders(signals, (prodRows ?? []) as Product[]);
 
-    // Carry already-committed autonomous spend so spend_cap holds ACROSS runs,
-    // not just within a single batch. (DB trigger re-checks as defense-in-depth.)
+    // Carry already-committed agent-originated spend (auto + approved, net of
+    // reversals) so spend_cap holds ACROSS runs, not just within one batch.
     const { data: spentRows } = await sb
       .from("agent_audit_log")
       .select("action, amount")
       .eq("contractor_id", user.id)
-      .in("action", ["auto_po", "reversal"]);
-    const alreadySpent = sumNetAutoSpend(
+      .in("action", ["auto_po", "approve_execute", "reversal"]);
+    const alreadySpent = sumNetAgentSpend(
       (spentRows ?? []) as Array<{ action: string; amount: number }>,
     );
     const evalResult = evaluatePlan(plan.items, policy, alreadySpent);
@@ -63,34 +63,18 @@ export async function POST() {
     const reversibleUntil = new Date(Date.now() + 86_400_000).toISOString();
     let auto = 0;
 
+    // Each auto item executes atomically in one transaction (order+PO+decision+
+    // action+audit); the policy trigger re-validates and rolls back on any breach.
     for (const item of evalResult.autoItems) {
-      const poId = await executePo(sb, user.id, item);
-      if (!poId) continue;
-      const { data: dec } = await sb
-        .from("agent_decisions")
-        .insert({
-          contractor_id: user.id,
-          action: "reorder",
-          rationale: item.rationale,
-          status: "auto_executed",
-          plan: item,
-        })
-        .select("id")
-        .single();
-      if (!dec) continue;
-      // DB trigger enforce_agent_policy re-validates this insert.
-      const { error } = await sb.from("agent_actions").insert({
-        decision_id: dec.id,
-        po_id: poId,
-        reversible_until: reversibleUntil,
+      const { error } = await sb.rpc("agent_execute_auto", {
+        p_contractor: user.id,
+        p_supplier: item.supplierId,
+        p_amount: item.amount,
+        p_rationale: item.rationale,
+        p_plan: item,
+        p_reversible_until: reversibleUntil,
       });
-      if (error) continue; // blocked by DB policy guard
-      await sb.from("agent_audit_log").insert({
-        contractor_id: user.id,
-        decision_id: dec.id,
-        action: "auto_po",
-        amount: item.amount,
-      });
+      if (error) continue; // blocked by DB policy guard (e.g. race past cap)
       auto += 1;
     }
 
@@ -112,34 +96,4 @@ export async function POST() {
   } catch (e) {
     return NextResponse.json({ error: (e as Error).message }, { status: 500 });
   }
-}
-
-async function executePo(
-  sb: ReturnType<typeof createServerSupabase>,
-  contractorId: string,
-  item: PlanItem,
-): Promise<string | null> {
-  const { data: order } = await sb
-    .from("orders")
-    .insert({
-      contractor_id: contractorId,
-      payment_method: "escrow",
-      status: "pending",
-      subtotal: item.amount,
-      total: item.amount,
-    })
-    .select("id")
-    .single();
-  if (!order) return null;
-  const { data: po } = await sb
-    .from("purchase_orders")
-    .insert({
-      order_id: order.id,
-      supplier_id: item.supplierId,
-      status: "pending",
-      subtotal: item.amount,
-    })
-    .select("id")
-    .single();
-  return po?.id ?? null;
 }

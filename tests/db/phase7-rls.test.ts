@@ -106,8 +106,9 @@ describe("Phase 7 RLS + DB policy enforcement", () => {
     );
     expect(ok.rows.length).toBe(1);
 
-    // an 'approved' (human-authorized) decision may exceed auto limits
-    const bigPo = await makePo(HANIL, 9_000_000);
+    // an 'approved' (human-authorized) decision may exceed the per-item max_po
+    // (8M > 3M) — but still stays within spend_cap (1.5M + 8M = 9.5M ≤ 10M).
+    const bigPo = await makePo(HANIL, 8_000_000);
     const approved = await makeDecision("approved");
     const ok2 = await t.db.query(
       "insert into agent_actions (decision_id, po_id, reversible_until) values ($1,$2,$3) returning id",

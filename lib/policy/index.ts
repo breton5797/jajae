@@ -113,16 +113,19 @@ export function evaluatePlan(
 }
 
 /**
- * Net autonomous spend already committed in the cap window, from agent audit
- * entries: auto-executed POs add, reversals subtract, human-approved spend is
- * NOT counted (it is a human decision, outside the autonomy cap). Floored at 0.
+ * Net agent-originated spend already committed in the cap window, from agent
+ * audit entries: auto-executed POs AND human-approved (escalated) POs add,
+ * reversals subtract. Floored at 0. spend_cap bounds the TOTAL of agent-driven
+ * spend, so approvals count too; only per-item limits are human-overridable.
  * Feed this as `alreadySpent` so the spend cap holds ACROSS runs, not per-run.
  */
-export function sumNetAutoSpend(
+export function sumNetAgentSpend(
   entries: ReadonlyArray<{ action: string; amount: number }>,
 ): number {
   const net = entries.reduce((sum, e) => {
-    if (e.action === "auto_po") return sum + Number(e.amount);
+    if (e.action === "auto_po" || e.action === "approve_execute") {
+      return sum + Number(e.amount);
+    }
     if (e.action === "reversal") return sum - Number(e.amount);
     return sum;
   }, 0);

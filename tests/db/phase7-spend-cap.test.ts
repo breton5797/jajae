@@ -8,7 +8,7 @@
  */
 import { describe, it, expect, beforeAll, afterAll } from "vitest";
 import { createTestDb, type TestDb } from "./harness";
-import { sumNetAutoSpend } from "@/lib/policy";
+import { sumNetAgentSpend } from "@/lib/policy";
 
 const HANIL = "33333333-0000-0000-0000-000000000001";
 const future = () => new Date(Date.now() + 86_400_000).toISOString();
@@ -197,7 +197,7 @@ describe("Phase 7 — a reversal frees cap room on BOTH the server and DB layers
         [A],
       )
     ).rows.map((r) => ({ action: r.action, amount: Number(r.amount) }));
-    expect(sumNetAutoSpend(auditRows)).toBe(0);
+    expect(sumNetAgentSpend(auditRows)).toBe(0);
 
     // DB layer: a fresh 2M auto-PO (the full cap) is now allowed
     const po2 = await makePo(2_000_000);
