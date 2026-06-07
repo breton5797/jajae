@@ -1,5 +1,10 @@
 import { describe, it, expect } from "vitest";
-import { evaluatePlan, assertWithinPolicy, isKillSwitched } from "@/lib/policy";
+import {
+  evaluatePlan,
+  assertWithinPolicy,
+  isKillSwitched,
+  sumNetAutoSpend,
+} from "@/lib/policy";
 import type { AgentPolicy, PlanItem } from "@/lib/types";
 
 function policy(over: Partial<AgentPolicy> = {}): AgentPolicy {
@@ -70,6 +75,25 @@ describe("evaluatePlan", () => {
       policy({ category_limits: { tile: 1_000_000 }, escalation_threshold: 0 }),
     );
     expect(r.evals[0]?.decision).toBe("escalate");
+  });
+});
+
+describe("sumNetAutoSpend", () => {
+  it("nets auto_po against reversals, ignores other actions, floors at 0", () => {
+    expect(
+      sumNetAutoSpend([
+        { action: "auto_po", amount: 1_500_000 },
+        { action: "auto_po", amount: 1_000_000 },
+        { action: "reversal", amount: 500_000 },
+        { action: "approve_execute", amount: 9_000_000 }, // human-approved: not autonomous spend
+      ]),
+    ).toBe(2_000_000);
+  });
+  it("returns 0 for no history", () => {
+    expect(sumNetAutoSpend([])).toBe(0);
+  });
+  it("never goes negative when reversals exceed auto spend", () => {
+    expect(sumNetAutoSpend([{ action: "reversal", amount: 5_000_000 }])).toBe(0);
   });
 });
 

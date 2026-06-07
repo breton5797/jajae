@@ -112,6 +112,23 @@ export function evaluatePlan(
   };
 }
 
+/**
+ * Net autonomous spend already committed in the cap window, from agent audit
+ * entries: auto-executed POs add, reversals subtract, human-approved spend is
+ * NOT counted (it is a human decision, outside the autonomy cap). Floored at 0.
+ * Feed this as `alreadySpent` so the spend cap holds ACROSS runs, not per-run.
+ */
+export function sumNetAutoSpend(
+  entries: ReadonlyArray<{ action: string; amount: number }>,
+): number {
+  const net = entries.reduce((sum, e) => {
+    if (e.action === "auto_po") return sum + Number(e.amount);
+    if (e.action === "reversal") return sum - Number(e.amount);
+    return sum;
+  }, 0);
+  return Math.max(0, net);
+}
+
 /** Single-item server gate used right before executing an auto-PO. */
 export function assertWithinPolicy(
   item: PlanItem,

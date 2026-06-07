@@ -37,6 +37,15 @@ export async function POST(
     if (!decRow) return NextResponse.json({ error: "결정을 찾을 수 없습니다." }, { status: 404 });
     const decision = decRow as AgentDecision;
 
+    // Idempotency guard: only an escalated decision is actionable. Without this,
+    // a repeated/retried POST would mint a duplicate order + PO each time.
+    if (decision.status !== "escalated") {
+      return NextResponse.json(
+        { error: "이미 처리된 결정입니다." },
+        { status: 409 },
+      );
+    }
+
     if (parsed.data.action === "reject") {
       await sb.from("agent_decisions").update({ status: "rejected" }).eq("id", params.id);
       await sb.from("agent_audit_log").insert({
@@ -48,9 +57,10 @@ export async function POST(
       return NextResponse.json({ status: "rejected" });
     }
 
-    // approve → mark approved, then execute the PO (bypasses auto gate since status != auto_executed)
+    // approve → execute the PO FIRST; only mark 'approved' after the action row
+    // commits. A transient failure mid-sequence then leaves the decision
+    // 'escalated' (retryable) instead of bricking it behind the 409 guard.
     const item = decision.plan as unknown as PlanItem;
-    await sb.from("agent_decisions").update({ status: "approved" }).eq("id", params.id);
 
     const { data: order } = await sb
       .from("orders")
@@ -74,13 +84,20 @@ export async function POST(
       })
       .select("id")
       .single();
-    if (po) {
-      await sb.from("agent_actions").insert({
-        decision_id: params.id,
-        po_id: po.id,
-        reversible_until: new Date(Date.now() + 86_400_000).toISOString(),
-      });
+    if (!po) return NextResponse.json({ error: "발주 생성 실패" }, { status: 500 });
+
+    // The agent_actions insert (unique on decision_id) is the idempotency gate:
+    // if this decision was already executed, it fails here and status stays put.
+    const { error: actErr } = await sb.from("agent_actions").insert({
+      decision_id: params.id,
+      po_id: po.id,
+      reversible_until: new Date(Date.now() + 86_400_000).toISOString(),
+    });
+    if (actErr) {
+      return NextResponse.json({ error: "이미 실행된 결정입니다." }, { status: 409 });
     }
+
+    await sb.from("agent_decisions").update({ status: "approved" }).eq("id", params.id);
     await sb.from("agent_audit_log").insert({
       contractor_id: user.id,
       decision_id: params.id,
@@ -88,7 +105,7 @@ export async function POST(
       amount: item.amount,
     });
 
-    return NextResponse.json({ status: "approved", poId: po?.id ?? null });
+    return NextResponse.json({ status: "approved", poId: po.id });
   } catch (e) {
     return NextResponse.json({ error: (e as Error).message }, { status: 500 });
   }

@@ -1,6 +1,6 @@
 import { NextResponse } from "next/server";
 import { planReorders, type ReorderSignal } from "@/lib/agent";
-import { evaluatePlan } from "@/lib/policy";
+import { evaluatePlan, sumNetAutoSpend } from "@/lib/policy";
 import { createServerSupabase } from "@/lib/supabase/server";
 import { loadReorderOverview } from "@/lib/data/forecast";
 import type { AgentPolicy, PlanItem, Product } from "@/lib/types";
@@ -47,7 +47,18 @@ export async function POST() {
       .select("*")
       .in("id", signals.map((s) => s.productId));
     const plan = planReorders(signals, (prodRows ?? []) as Product[]);
-    const evalResult = evaluatePlan(plan.items, policy);
+
+    // Carry already-committed autonomous spend so spend_cap holds ACROSS runs,
+    // not just within a single batch. (DB trigger re-checks as defense-in-depth.)
+    const { data: spentRows } = await sb
+      .from("agent_audit_log")
+      .select("action, amount")
+      .eq("contractor_id", user.id)
+      .in("action", ["auto_po", "reversal"]);
+    const alreadySpent = sumNetAutoSpend(
+      (spentRows ?? []) as Array<{ action: string; amount: number }>,
+    );
+    const evalResult = evaluatePlan(plan.items, policy, alreadySpent);
 
     const reversibleUntil = new Date(Date.now() + 86_400_000).toISOString();
     let auto = 0;

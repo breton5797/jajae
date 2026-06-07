@@ -31,14 +31,17 @@ export async function POST(
       return NextResponse.json({ error: "취소 가능 시간이 지났습니다." }, { status: 409 });
     }
 
+    let reversedAmount = 0;
     if (action.po_id) {
       // block reversal if the order is already dispatched from a hub
-      const { data: order } = await sb
+      const { data: poRow } = await sb
         .from("purchase_orders")
-        .select("order_id")
+        .select("order_id, subtotal")
         .eq("id", action.po_id)
         .maybeSingle();
-      const orderId = (order as { order_id: string } | null)?.order_id;
+      const po = poRow as { order_id: string; subtotal: number } | null;
+      reversedAmount = Number(po?.subtotal ?? 0);
+      const orderId = po?.order_id;
       if (orderId) {
         const { data: routes } = await sb
           .from("fulfillment_routes")
@@ -55,11 +58,13 @@ export async function POST(
       await sb.from("purchase_orders").update({ status: "cancelled" }).eq("id", action.po_id);
     }
     await sb.from("agent_actions").update({ reversed: true }).eq("id", params.id);
+    // Record the reversed amount so the server-side spend gate (sumNetAutoSpend)
+    // frees the same room the DB trigger does — keeping both cap layers in sync.
     await sb.from("agent_audit_log").insert({
       contractor_id: user.id,
       decision_id: action.decision_id,
       action: "reversal",
-      amount: 0,
+      amount: reversedAmount,
     });
 
     return NextResponse.json({ reversed: true });
