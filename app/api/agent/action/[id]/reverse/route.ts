@@ -36,6 +36,7 @@ export async function POST(
     }
     return NextResponse.json({ reversed: true });
   } catch (e) {
-    return NextResponse.json({ error: (e as Error).message }, { status: 500 });
+    console.error("agent reverse failed:", e);
+    return NextResponse.json({ error: "처리 중 오류가 발생했습니다." }, { status: 500 });
   }
 }
