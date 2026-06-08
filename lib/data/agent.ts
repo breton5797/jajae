@@ -1,5 +1,6 @@
 import "server-only";
 import { createServerSupabase, createServiceSupabase } from "@/lib/supabase/server";
+import { requireAdmin } from "@/lib/auth";
 import type {
   AgentAction,
   AgentDecision,
@@ -61,7 +62,16 @@ export async function loadAgentConsole(): Promise<AgentConsole> {
 
 /** Admin agent-ops stats: autonomous PO volume, escalation rate, interventions. */
 export async function loadAgentOps(): Promise<AgentOpsStats> {
+  const empty: AgentOpsStats = {
+    autoPoCount: 0,
+    autoPoValue: 0,
+    escalations: 0,
+    escalationRate: 0,
+    interventions: 0,
+  };
   try {
+    // service_role bypasses RLS — gate to admins before reading cross-tenant data
+    if (!(await requireAdmin())) return empty;
     const sb = createServiceSupabase();
     const [{ data: decisions }, { data: audit }] = await Promise.all([
       sb.from("agent_decisions").select("status, plan"),
@@ -83,12 +93,6 @@ export async function loadAgentOps(): Promise<AgentOpsStats> {
       interventions,
     };
   } catch {
-    return {
-      autoPoCount: 0,
-      autoPoValue: 0,
-      escalations: 0,
-      escalationRate: 0,
-      interventions: 0,
-    };
+    return empty;
   }
 }

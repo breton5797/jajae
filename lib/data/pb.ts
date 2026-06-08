@@ -1,11 +1,14 @@
 import "server-only";
 import { createServiceSupabase } from "@/lib/supabase/server";
+import { requireAdmin } from "@/lib/auth";
 import { recommendPbCandidates } from "@/lib/pb";
 import type { Category, PbCandidate, CategoryDemand } from "@/lib/types";
 
 /** Aggregate order_items demand by category for PB recommendation (admin view). */
 export async function loadPbDemand(): Promise<CategoryDemand[]> {
   try {
+    // service_role bypasses RLS — gate to admins before reading cross-tenant data
+    if (!(await requireAdmin())) return [];
     const sb = createServiceSupabase();
     const [{ data: items }, { data: products }, { data: cats }] =
       await Promise.all([

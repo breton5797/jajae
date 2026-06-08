@@ -26,3 +26,13 @@ export async function getAuthedUser(): Promise<AuthedUser | null> {
     bizStatus: (profile?.biz_status as string) ?? "pending",
   };
 }
+
+/**
+ * True iff the current request is from an authenticated admin. Server-only.
+ * Service-role loaders/routes (which BYPASS RLS) MUST call this before reading,
+ * otherwise an anonymous or non-admin caller would see cross-tenant data.
+ */
+export async function requireAdmin(): Promise<boolean> {
+  const me = await getAuthedUser();
+  return me?.role === "admin";
+}

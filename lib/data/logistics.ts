@@ -1,10 +1,13 @@
 import "server-only";
 import { createServiceSupabase, createServerSupabase } from "@/lib/supabase/server";
+import { requireAdmin } from "@/lib/auth";
 import type { DeliveryRun, OpenPoForBatching, Order, Site } from "@/lib/types";
 
 /** Open POs (ready to batch) joined with their site region/date/coords. Admin view. */
 export async function loadOpenPosForBatching(): Promise<OpenPoForBatching[]> {
   try {
+    // service_role bypasses RLS — gate to admins before reading cross-tenant data
+    if (!(await requireAdmin())) return [];
     const sb = createServiceSupabase();
     const [{ data: pos }, { data: orders }, { data: sites }] = await Promise.all([
       sb

@@ -1,11 +1,23 @@
 import "server-only";
 import { createServiceSupabase } from "@/lib/supabase/server";
+import { requireAdmin } from "@/lib/auth";
 import { computeAnalytics } from "@/lib/analytics";
 import type { AnalyticsResult } from "@/lib/types";
 
 /** Compute live owner KPIs across all orders/items (admin dashboard). */
 export async function loadLiveAnalytics(period: string): Promise<AnalyticsResult> {
+  const empty: AnalyticsResult = {
+    period,
+    gmv: 0,
+    margin: 0,
+    pbShare: 0,
+    repeatRate: 0,
+    forecastAccuracy: 0,
+    supplierPerf: [],
+  };
   try {
+    // service_role bypasses RLS — gate to admins before reading cross-tenant data
+    if (!(await requireAdmin())) return empty;
     const sb = createServiceSupabase();
     const [{ data: orders }, { data: items }, { data: forecasts }] =
       await Promise.all([
@@ -62,14 +74,6 @@ export async function loadLiveAnalytics(period: string): Promise<AnalyticsResult
       ),
     });
   } catch {
-    return {
-      period,
-      gmv: 0,
-      margin: 0,
-      pbShare: 0,
-      repeatRate: 0,
-      forecastAccuracy: 0,
-      supplierPerf: [],
-    };
+    return empty;
   }
 }
