@@ -96,5 +96,7 @@ describe("Phase 8 E2E: return triage", () => {
     const refund = computeRefundAmount(1, 100_000);
     const ret = await seedReturn(a, 1, 100_000, "그냥 변심");
     expect(await runAuto(ret, "그냥 변심", refund)).toBe("escalate");
+    await t.asService();
+    expect((await t.db.query("select status from returns where id=$1", [ret])).rows[0]).toEqual({ status: "requested" });
   });
 });
