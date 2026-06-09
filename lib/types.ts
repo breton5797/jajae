@@ -1183,3 +1183,37 @@ export interface AgentOpsStats {
   escalationRate: number;
   interventions: number;
 }
+
+/* ---------- Phase 8: return triage ---------- */
+
+export type TriageResponsibility =
+  | "supplier"
+  | "delivery"
+  | "contractor"
+  | "ambiguous";
+
+/** 분류기가 제안하는 처리(자동 적용은 'approve'만 후보). */
+export type TriageProposedDecision = "approve" | "reject" | "ambiguous";
+
+export interface ReturnClassification {
+  responsibility: TriageResponsibility;
+  decision: TriageProposedDecision;
+  confidence: number; // 0~1
+  rationale: string;
+}
+
+export interface TriagePolicy {
+  id: string;
+  auto_approve_cap: number;
+  min_confidence: number;
+  enabled: boolean;
+  created_at: string;
+}
+
+/** 트리아지 최종 산출: 자동 승인 또는 사람 에스컬레이션. */
+export type TriageOutcome = "auto_approve" | "escalate";
+
+export interface TriageEval {
+  outcome: TriageOutcome;
+  reasons: string[];
+}
