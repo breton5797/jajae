@@ -55,6 +55,7 @@ export default async function AdminPage() {
           { href: "/admin/analytics", label: "애널리틱스" },
           { href: "/admin/hubs", label: "물류 허브" },
           { href: "/admin/agent-ops", label: "에이전트 현황" },
+          { href: "/admin/triage", label: "반품 트리아지" },
         ].map((l) => (
           <Button key={l.href} variant="outline" size="sm" asChild>
             <Link href={l.href}>{l.label}</Link>
