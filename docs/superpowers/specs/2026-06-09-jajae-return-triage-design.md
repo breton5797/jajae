@@ -84,6 +84,10 @@ auto_approve  ⟺  enabled
 
 `refundAmount = returns.qty × order_items.unit_price_snapshot` (DB에서 산출, caller 신뢰 안 함).
 
+> **운영 주의(`min_confidence`):** `min_confidence=0`으로 두면 신뢰도 게이트가 무력화되어
+> `approve@0.0`도 (상한 내·enabled 시) 자동 승인될 수 있다. 권장 운영값은 ≥ 0.7이며, 관리자
+> UI는 0이 아닌 값을 입력하도록 안내한다. (킬스위치·상한이 여전히 상위 가드로 작동.)
+
 ## 5. 원자적 RPC (plpgsql · `security definer` · fail-closed)
 
 ### 5.1 `triage_auto_resolve_return(p_return_id, p_proposed_decision, p_responsibility, p_confidence, p_rationale) returns text`
@@ -92,9 +96,14 @@ auto_approve  ⟺  enabled
 
 0. 신뢰 호출자 검증: `if not (auth.role() = 'service_role' or public.is_admin()) then raise 'unauthorized'`.
 1. `select ... from returns where id=p_return_id for update` — 없으면 `raise 'return not found'`.
-2. `status <> 'requested'` → `raise 'return not actionable (status=%)'`.
-3. `triage_decisions` 행 존재 → `raise 'return already triaged'` (idempotency, §3.2).
+2. `triage_decisions` 행 존재 → `raise 'return already triaged'` (idempotency, §3.2).
+3. `status <> 'requested'` → `raise 'return not actionable (status=%)'`.
 4. `refund_amount` 산출(order_items join).
+
+> **체크 순서(중요):** idempotency(2)를 not-actionable(3)보다 **먼저** 검사한다. 자동 승인으로
+> `status='approved'`가 된 건을 재호출하면 "이미 트리아지됨"이 떠야 하고(결정 행이 곧 처리 여부의
+> 진실), 자동 에스컬레이션된 건(status는 'requested' 유지)도 결정 행 존재로 재처리가 막혀야 하기
+> 때문이다. 둘 다 raise이며 라우트에서 409로 매핑된다.
 5. 정책 1행 읽기 — 없으면 `raise 'triage policy not configured'` (**fail-closed**).
 6. §4 규칙으로 `v_decision` 계산:
    - `approve`: `update returns set status='approved'`; `insert triage_decisions(source='auto', decision='approve', ...)`.
@@ -203,3 +212,12 @@ auto_approve  ⟺  enabled
 - RED→GREEN: `0013` 적용 **전** 신규 RPC/RLS 테스트 실패 → 적용 **후** 통과.
 - 적대적 다중렌즈 검증 후 발견 이슈 반영.
 - ESLint `import/no-restricted-paths` 위반 없음(triage 순수 ↔ data IO 경계 유지).
+
+## 12. 후속 의존성 / 보안 로드맵 주의
+
+- **`returns.status` 자가 전이(기존 RLS):** `0002_rls.sql`의 `returns_update`는 시공사가 본인 반품
+  행을 self-update할 수 있게 허용한다(컬럼 가드·전이 트리거 없음). 본 페이즈에서는 `status` 변경이
+  **금전을 움직이지 않으므로**(환급 집행은 §2 범위 외, self-flip은 감사 `triage_decision`도 남기지
+  않음) 위험이 없다. 그러나 **향후 `returns.status='approved'`를 실제 에스크로 환급 집행과 연동하는
+  페이즈에서는** 이 self-update가 악용 가능해진다 → 그 전에 status 전이 트리거(승인은 관리자/RPC만)
+  를 반드시 추가할 것.
