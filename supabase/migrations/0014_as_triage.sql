@@ -106,3 +106,78 @@ begin
   return v_decision;
 end;
 $$;
+
+-- ---------- RPC: 관리자 수동 결정 ----------
+create or replace function public.as_triage_admin_resolve(
+  p_as_request_id uuid,
+  p_decision text
+) returns void
+  language plpgsql security definer set search_path = public as $$
+declare
+  v_status text;
+begin
+  if not (auth.role() = 'service_role' or public.is_admin()) then
+    raise exception 'unauthorized';
+  end if;
+  if p_decision not in ('schedule','reject') then
+    raise exception 'invalid decision %', p_decision;
+  end if;
+  select status into v_status from as_requests where id = p_as_request_id for update;
+  if not found then raise exception 'as request not found'; end if;
+  if v_status <> 'requested' then
+    raise exception 'as request not actionable (status=%)', v_status;
+  end if;
+
+  update as_requests
+    set status = (case when p_decision = 'schedule' then 'scheduled' else 'rejected' end)::as_status
+    where id = p_as_request_id;
+  insert into as_triage_decisions
+    (as_request_id, source, decision, responsibility, confidence, rationale, actor)
+    values (p_as_request_id, 'admin', p_decision, 'ambiguous', 1, '관리자 수동 결정', auth.uid());
+end;
+$$;
+
+-- ---------- RPC: 관리자 가역 ----------
+create or replace function public.as_triage_reverse(p_as_request_id uuid)
+  returns void
+  language plpgsql security definer set search_path = public as $$
+declare
+  v_status text;
+  v_dec    uuid;
+begin
+  if not (auth.role() = 'service_role' or public.is_admin()) then
+    raise exception 'unauthorized';
+  end if;
+  select status into v_status from as_requests where id = p_as_request_id for update;
+  if not found then raise exception 'as request not found'; end if;
+  if v_status in ('in_progress','completed') then
+    raise exception 'as request in progress or completed; cannot reverse';
+  end if;
+  select d.id into v_dec
+    from as_triage_decisions d
+    where d.as_request_id = p_as_request_id
+      and d.source in ('auto','admin')
+      and d.decision in ('schedule','reject')
+      and not exists (select 1 from as_triage_decisions x where x.reversed_of = d.id)
+    order by d.created_at desc
+    limit 1;
+  if v_dec is null then raise exception 'no active resolution to reverse'; end if;
+
+  update as_requests set status = 'requested' where id = p_as_request_id;
+  insert into as_triage_decisions
+    (as_request_id, source, decision, responsibility, confidence, rationale, reversed_of, actor)
+    values (p_as_request_id, 'reversal', 'escalate', 'ambiguous', 0, '관리자 가역', v_dec, auth.uid());
+end;
+$$;
+
+-- ---------- grants ----------
+revoke execute on function
+  public.as_triage_auto_resolve(uuid, text, text, numeric, text),
+  public.as_triage_admin_resolve(uuid, text),
+  public.as_triage_reverse(uuid)
+  from public;
+grant execute on function
+  public.as_triage_auto_resolve(uuid, text, text, numeric, text),
+  public.as_triage_admin_resolve(uuid, text),
+  public.as_triage_reverse(uuid)
+  to authenticated, service_role;

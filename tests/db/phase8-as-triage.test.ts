@@ -181,4 +181,46 @@ describe("Phase 8-2 AS triage", () => {
     await t.asService();
     await t.db.query("insert into as_triage_policies (singleton, min_confidence, enabled) values (true,0.8,false)");
   });
+
+  it("admin: 수동 예약(시공사귀책 오버라이드) 기록", async () => {
+    const a = await t.seedUser({ role: "contractor" });
+    await setPolicy({ enabled: true });
+    const as = await seedAsRequest({ contractor: a });
+    await t.asUser(admin);
+    await autoResolve(as, "schedule", "contractor", 0.99); // escalate
+    await t.db.query("select as_triage_admin_resolve($1,'schedule')", [as]);
+    await t.asService();
+    expect((await t.db.query("select status from as_requests where id=$1", [as])).rows[0]).toEqual({ status: "scheduled" });
+    expect((await t.db.query("select 1 from as_triage_decisions where as_request_id=$1 and source='admin' and decision='schedule'", [as])).rows.length).toBe(1);
+  });
+
+  it("admin: 비관리자 호출 unauthorized", async () => {
+    const a = await t.seedUser({ role: "contractor" });
+    const as = await seedAsRequest({ contractor: a });
+    await t.asUser(a);
+    await expect(t.db.query("select as_triage_admin_resolve($1,'reject')", [as])).rejects.toThrow(/unauthorized/i);
+  });
+
+  it("reverse: 예약 되돌리면 requested 원복 + 상쇄 로그, 재가역 raise", async () => {
+    const a = await t.seedUser({ role: "contractor" });
+    await setPolicy({ enabled: true });
+    const as = await seedAsRequest({ contractor: a });
+    await t.asUser(admin);
+    await autoResolve(as, "schedule", "supplier", 0.9); // scheduled
+    await t.db.query("select as_triage_reverse($1)", [as]);
+    await t.asService();
+    expect((await t.db.query("select status from as_requests where id=$1", [as])).rows[0]).toEqual({ status: "requested" });
+    expect((await t.db.query("select 1 from as_triage_decisions where as_request_id=$1 and source='reversal'", [as])).rows.length).toBe(1);
+    await t.asUser(admin);
+    await expect(t.db.query("select as_triage_reverse($1)", [as])).rejects.toThrow(/no active resolution/);
+  });
+
+  it("reverse: in_progress/completed 건은 raise", async () => {
+    const a = await t.seedUser({ role: "contractor" });
+    const as1 = await seedAsRequest({ contractor: a, status: "in_progress" });
+    const as2 = await seedAsRequest({ contractor: a, status: "completed" });
+    await t.asUser(admin);
+    await expect(t.db.query("select as_triage_reverse($1)", [as1])).rejects.toThrow(/cannot reverse/);
+    await expect(t.db.query("select as_triage_reverse($1)", [as2])).rejects.toThrow(/cannot reverse/);
+  });
 });
