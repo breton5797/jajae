@@ -68,7 +68,10 @@ export async function POST() {
         p_confidence: cls.confidence,
         p_rationale: cls.rationale,
       });
-      if (error) continue;
+      if (error) {
+        console.error("triage_auto_resolve_return error:", error);
+        continue;
+      }
       if (outcome === "approve") approved += 1;
       else escalated += 1;
     }
