@@ -100,4 +100,85 @@ describe("Phase 8-2 AS triage", () => {
     await expect(t.db.query("update as_triage_decisions set rationale='x' where id=$1", [id])).rejects.toThrow();
     await expect(t.db.query("delete from as_triage_decisions where id=$1", [id])).rejects.toThrow();
   });
+
+  it("auto: 공급사 귀책 + 고신뢰 → scheduled + auto 로그(원자)", async () => {
+    const a = await t.seedUser({ role: "contractor" });
+    await setPolicy({ enabled: true, minConf: 0.8 });
+    const as = await seedAsRequest({ contractor: a });
+    await t.asUser(admin);
+    expect((await autoResolve(as, "schedule", "supplier", 0.9)).rows[0]!.d).toBe("schedule");
+    await t.asService();
+    expect((await t.db.query("select status from as_requests where id=$1", [as])).rows[0]).toEqual({ status: "scheduled" });
+    expect((await t.db.query("select 1 from as_triage_decisions where as_request_id=$1 and source='auto' and decision='schedule'", [as])).rows.length).toBe(1);
+  });
+
+  it("auto: 배송 귀책도 자동 예약", async () => {
+    const a = await t.seedUser({ role: "contractor" });
+    await setPolicy({ enabled: true });
+    const as = await seedAsRequest({ contractor: a });
+    await t.asUser(admin);
+    expect((await autoResolve(as, "schedule", "delivery", 0.9)).rows[0]!.d).toBe("schedule");
+  });
+
+  it("auto: 시공사 귀책 → escalate(status 유지)", async () => {
+    const a = await t.seedUser({ role: "contractor" });
+    await setPolicy({ enabled: true });
+    const as = await seedAsRequest({ contractor: a });
+    await t.asUser(admin);
+    expect((await autoResolve(as, "schedule", "contractor", 0.95)).rows[0]!.d).toBe("escalate");
+    await t.asService();
+    expect((await t.db.query("select status from as_requests where id=$1", [as])).rows[0]).toEqual({ status: "requested" });
+  });
+
+  it("auto: 저신뢰 → escalate", async () => {
+    const a = await t.seedUser({ role: "contractor" });
+    await setPolicy({ enabled: true, minConf: 0.8 });
+    const as = await seedAsRequest({ contractor: a });
+    await t.asUser(admin);
+    expect((await autoResolve(as, "schedule", "supplier", 0.5)).rows[0]!.d).toBe("escalate");
+  });
+
+  it("auto: 킬스위치 → escalate", async () => {
+    const a = await t.seedUser({ role: "contractor" });
+    await setPolicy({ enabled: false });
+    const as = await seedAsRequest({ contractor: a });
+    await t.asUser(admin);
+    expect((await autoResolve(as, "schedule", "supplier", 0.99)).rows[0]!.d).toBe("escalate");
+  });
+
+  it("auto: 이미 트리아지된 건 재호출 raise(idempotency)", async () => {
+    const a = await t.seedUser({ role: "contractor" });
+    await setPolicy({ enabled: true });
+    const as = await seedAsRequest({ contractor: a });
+    await t.asUser(admin);
+    await autoResolve(as, "schedule", "supplier", 0.9);
+    await expect(autoResolve(as, "schedule", "supplier", 0.9)).rejects.toThrow(/already triaged/);
+  });
+
+  it("auto: requested 아닌 건 raise(not actionable)", async () => {
+    const a = await t.seedUser({ role: "contractor" });
+    await setPolicy({ enabled: true });
+    const as = await seedAsRequest({ contractor: a, status: "scheduled" });
+    await t.asUser(admin);
+    await expect(autoResolve(as, "schedule", "supplier", 0.9)).rejects.toThrow(/not actionable/);
+  });
+
+  it("auto: 비관리자/비서비스 호출 unauthorized", async () => {
+    const a = await t.seedUser({ role: "contractor" });
+    await setPolicy({ enabled: true });
+    const as = await seedAsRequest({ contractor: a });
+    await t.asUser(a);
+    await expect(autoResolve(as, "schedule", "supplier", 0.9)).rejects.toThrow(/unauthorized/i);
+  });
+
+  it("auto: 정책 행 없으면 fail-closed raise", async () => {
+    const a = await t.seedUser({ role: "contractor" });
+    await t.asService();
+    await t.db.query("delete from as_triage_policies");
+    const as = await seedAsRequest({ contractor: a });
+    await t.asUser(admin);
+    await expect(autoResolve(as, "schedule", "supplier", 0.9)).rejects.toThrow(/not configured/);
+    await t.asService();
+    await t.db.query("insert into as_triage_policies (singleton, min_confidence, enabled) values (true,0.8,false)");
+  });
 });

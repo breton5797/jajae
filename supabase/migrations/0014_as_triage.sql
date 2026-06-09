@@ -53,3 +53,56 @@ create policy as_triagedec_select on as_triage_decisions for select
       where r.id = as_triage_decisions.as_request_id and r.contractor_id = auth.uid()
     )
   );
+
+-- ---------- RPC: 자동 경로 (DB가 schedule vs escalate 결정) ----------
+create or replace function public.as_triage_auto_resolve(
+  p_as_request_id uuid,
+  p_proposed_decision text,
+  p_responsibility text,
+  p_confidence numeric,
+  p_rationale text
+) returns text
+  language plpgsql security definer set search_path = public as $$
+declare
+  v_status   text;
+  v_enabled  boolean;
+  v_minconf  numeric;
+  v_decision text;
+begin
+  if not (auth.role() = 'service_role' or public.is_admin()) then
+    raise exception 'unauthorized';
+  end if;
+
+  select status into v_status from as_requests where id = p_as_request_id for update;
+  if not found then raise exception 'as request not found'; end if;
+  if exists (select 1 from as_triage_decisions where as_request_id = p_as_request_id) then
+    raise exception 'as request already triaged';
+  end if;
+  if v_status <> 'requested' then
+    raise exception 'as request not actionable (status=%)', v_status;
+  end if;
+
+  select enabled, min_confidence into v_enabled, v_minconf
+    from as_triage_policies where singleton = true;
+  if not found then raise exception 'as triage policy not configured'; end if;
+
+  if v_enabled
+     and p_proposed_decision = 'schedule'
+     and p_responsibility in ('supplier','delivery')
+     and p_confidence >= v_minconf then
+    v_decision := 'schedule';
+  else
+    v_decision := 'escalate';
+  end if;
+
+  if v_decision = 'schedule' then
+    update as_requests set status = 'scheduled' where id = p_as_request_id;
+  end if;
+
+  insert into as_triage_decisions
+    (as_request_id, source, decision, responsibility, confidence, rationale)
+    values (p_as_request_id, 'auto', v_decision, p_responsibility, p_confidence, p_rationale);
+
+  return v_decision;
+end;
+$$;
