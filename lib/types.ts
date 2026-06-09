@@ -1217,3 +1217,19 @@ export interface TriageEval {
   outcome: TriageOutcome;
   reasons: string[];
 }
+
+/* ---------- Phase 8-2: AS triage ---------- */
+
+export interface AsTriagePolicy {
+  id: string;
+  min_confidence: number;
+  enabled: boolean;
+  created_at: string;
+}
+
+export type AsTriageOutcome = "auto_schedule" | "escalate";
+
+export interface AsTriageEval {
+  outcome: AsTriageOutcome;
+  reasons: string[];
+}
