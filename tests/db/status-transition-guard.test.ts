@@ -96,6 +96,19 @@ describe("status transition guard (spec §12)", () => {
     ).rejects.toThrow(/status can only be changed by an admin/);
   });
 
+  it("공급사도 returns.status를 직접 못 바꾼다 (§12 공급사 벡터)", async () => {
+    const a = await t.seedUser({ role: "contractor" });
+    const supOwner = await t.seedUser({ role: "supplier" });
+    const ret = await seedReturn(a);
+    await t.asService();
+    const supId = (await t.db.query<{ id: string }>("select id from suppliers limit 1")).rows[0]!.id;
+    await t.linkSupplier(supId, supOwner);
+    await t.asUser(supOwner);
+    await expect(
+      t.db.query("update returns set status='approved' where id=$1", [ret]),
+    ).rejects.toThrow(/status can only be changed by an admin/);
+  });
+
   it("시공사는 비-status 필드(reason)는 편집 가능", async () => {
     const a = await t.seedUser({ role: "contractor" });
     const ret = await seedReturn(a);

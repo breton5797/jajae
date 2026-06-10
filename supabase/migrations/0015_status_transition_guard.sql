@@ -6,6 +6,16 @@
 -- or the trusted service_role backend (which includes the SECURITY DEFINER triage RPCs)
 -- may change `status`. Non-status columns (reason/qty/issue) stay self-editable.
 -- Mirrors prevent_profile_privilege_escalation (0012).
+--
+-- TRUST BOUNDARY: this guard (like 0012 and every RLS policy here) reads auth.role()
+-- = the `request.jwt.claim.role` GUC, which PostgREST sets per request and a normal
+-- REST call (one translated statement) cannot override. This holds ONLY while no raw
+-- multi-statement SQL surface is exposed to non-admin callers — do NOT add a generic
+-- execute_sql/query RPC callable by `authenticated`, or this (and 0012) can be bypassed
+-- via set_config('request.jwt.claim.role','service_role',false). Service-role key access
+-- is already fully trusted. Note: current_user / pg_has_role cannot replace auth.role()
+-- here — inside a SECURITY DEFINER trigger they resolve to the function owner, not the
+-- caller, so they would wrongly allow everyone.
 
 create or replace function public.guard_return_status_transition()
   returns trigger language plpgsql security definer set search_path = public as $$
