@@ -10,6 +10,7 @@
   }
   html {
     -webkit-text-size-adjust: 100%;
+    overflow-x: clip;
   }
   body {
     @apply bg-muted/30 text-foreground antialiased;
@@ -24,5 +25,20 @@
 @layer utilities {
   .container-app {
     @apply mx-auto w-full max-w-screen-md px-4;
+  }
+  .full-bleed {
+    width: 100vw;
+    margin-inline: calc(50% - 50vw);
+  }
+  .blueprint-grid {
+    background-image:
+      linear-gradient(to right, rgba(22, 24, 29, 0.045) 1px, transparent 1px),
+      linear-gradient(to bottom, rgba(22, 24, 29, 0.045) 1px, transparent 1px);
+    background-size: 32px 32px;
+  }
+  @media (prefers-reduced-motion: reduce) {
+    * {
+      transition-duration: 0.01ms !important;
+    }
   }
 }
