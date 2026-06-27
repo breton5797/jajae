@@ -13,3 +13,16 @@ coverage
 .vercel
 supabase/.branches
 supabase/.temp
+
+# Capacitor / Mobile
+ios/App/Pods/
+ios/App/build/
+ios/App/output/
+ios/App/App/public/
+android/.gradle/
+android/app/build/
+android/build/
+android/local.properties
+android/app/src/main/assets/public/
+*.xcuserstate
+DerivedData/
