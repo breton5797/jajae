@@ -8,7 +8,7 @@
 
 - 앱은 별도의 정적 번들 없이, **호스팅된 자재 웹앱 URL**을 네이티브 WebView에 로드한다.
 - SSR·API·미들웨어를 그대로 사용하므로 **인터넷 연결이 반드시 필요**하다.
-- `CAP_SERVER_URL` 환경변수가 설정되어 있으면 해당 URL을 로드하고, 미설정 시 `mobile/www/index.html` 스플래시 화면을 표시한다.
+- 기본값으로 **프로덕션 URL `https://jajae.vercel.app`**(README의 Live)을 로드한다. `CAP_SERVER_URL` 환경변수로 오버라이드한다(로컬 개발 시 개발 PC URL).
 
 ---
 
@@ -34,11 +34,13 @@
 
 ### `CAP_SERVER_URL`
 
-Capacitor가 WebView에서 로드할 자재 웹앱의 URL을 지정한다.
+Capacitor가 WebView에서 로드할 자재 웹앱의 URL을 지정한다. **기본값은 `https://jajae.vercel.app`** (`capacitor.config.ts`에 내장). 아래처럼 오버라이드한다.
 
 ```bash
-# 프로덕션 환경
-CAP_SERVER_URL=https://jajae.example.com
+# 미설정 시 기본값: https://jajae.vercel.app
+
+# 다른 프로덕션/스테이징 도메인
+CAP_SERVER_URL=https://app.jajae.kr
 
 # 로컬 개발 (같은 네트워크의 개발 PC LAN IP 사용)
 CAP_SERVER_URL=http://192.168.1.100:3000
@@ -156,6 +158,73 @@ Android Studio가 열리면:
 | `@capacitor/status-bar` | v8 | iOS·Android 상태 바 색상·스타일 제어 |
 | `@capacitor/splash-screen` | v8 | 앱 시작 시 스플래시 화면 표시 (1200ms, 배경색 `#1A56DB`) |
 | `@capacitor/camera` | v8 | 카메라 접근 (도면·자재 사진 촬영, 갤러리 선택) |
+| `@capacitor/push-notifications` | v8 | 푸시 알림 (FCM/APNs 설정 후 활성화 — 아래 참조) |
+
+---
+
+## 앱 아이콘 · 스플래시
+
+소스 이미지는 `assets/`에 있고 `@capacitor/assets`로 네이티브 리소스를 생성한다.
+현재 아이콘/스플래시는 **브랜드 블루 + "자" 플레이스홀더**다.
+
+```bash
+# assets/icon.png(1024) · splash.png/splash-dark.png(2732)을 실제 아트워크로 교체 후
+npm run cap:assets   # android/ios 아이콘·스플래시 재생성
+npm run cap:sync
+```
+
+플레이스홀더 재생성: `node scripts/gen-mobile-assets.mjs`. 자세한 내용은 `assets/README.md`.
+
+---
+
+## 푸시 알림 (FCM / APNs)
+
+플러그인(`@capacitor/push-notifications`)과 클라이언트 헬퍼(`lib/native/push.ts`)가 준비되어 있다.
+**원격 URL 모드**이므로 실제 동작하려면 호스팅된 웹앱(Next.js) 코드에서 `registerPush()`를 호출해야 하고, 아래 서비스 설정이 필요하다.
+
+### Android (FCM)
+1. [Firebase 콘솔](https://console.firebase.google.com)에서 프로젝트 생성 → Android 앱 추가(패키지 `com.jajae.app`).
+2. `google-services.json` 다운로드 → `android/app/google-services.json`에 저장(gitignore됨). `build.gradle`이 파일 존재 시 google-services 플러그인을 자동 적용한다. (템플릿: `android/app/google-services.json.example`)
+
+### iOS (APNs)
+1. Apple Developer 계정에서 App ID에 **Push Notifications** 활성화 + APNs 키(.p8) 생성.
+2. Xcode에서 App 타깃 → Signing & Capabilities → **Push Notifications** capability 추가.
+3. APNs 키를 FCM 또는 발송 백엔드에 등록.
+
+### 웹앱 연동 (후속)
+`lib/native/push.ts`의 `registerPush()`를 클라이언트 컴포넌트(예: 로그인 후)에서 호출하고 반환 토큰을 백엔드에 저장 → 발송 시 사용. 웹 환경에서는 자동 no-op.
+
+```ts
+import { registerPush } from "@/lib/native/push";
+await registerPush({ onToken: (t) => sendTokenToBackend(t) });
+```
+
+---
+
+## 릴리스 서명 & CI
+
+### Android 서명 (keystore.properties)
+1. 키스토어 생성:
+   ```bash
+   keytool -genkey -v -keystore android/app/release.keystore \
+     -alias jajae -keyalg RSA -keysize 2048 -validity 10000
+   ```
+2. `android/keystore.properties.example` → `android/keystore.properties`(gitignore됨) 복사 후 값 입력.
+3. `build.gradle`이 파일 존재 시 release 빌드에 서명을 적용한다(없으면 debug 서명으로 폴백).
+
+### GitHub Actions (`.github/workflows/mobile-build.yml`)
+수동 트리거(workflow_dispatch). Android AAB 빌드 + iOS 시뮬레이터 스모크. 서명된 릴리스를 위해 저장소 시크릿 설정:
+
+| 시크릿 | 용도 |
+|---|---|
+| `ANDROID_KEYSTORE_BASE64` | `base64 -i release.keystore` 출력 |
+| `ANDROID_KEYSTORE_PASSWORD` | 키스토어 비밀번호 |
+| `ANDROID_KEY_ALIAS` | 키 별칭 (jajae) |
+| `ANDROID_KEY_PASSWORD` | 키 비밀번호 |
+
+> iOS 서명 배포는 Apple Developer 인증서/프로파일(Fastlane match 등)이 추가로 필요하다.
+
+> **검증 메모**: 네이티브 빌드 설정(gradle 서명·CI YAML)은 이 환경에 Android SDK가 없어 **빌드 검증되지 않았다.** 툴체인을 갖춘 환경에서 첫 빌드 시 확인이 필요하다.
 
 ---
 

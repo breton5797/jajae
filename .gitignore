@@ -29,3 +29,8 @@ DerivedData/
 
 # Dev-only local auth helper — never commit (admin sign-in bypass; see code review)
 app/api/dev-login/
+
+# Mobile signing / FCM secrets — never commit
+android/keystore.properties
+android/app/release.keystore
+android/app/google-services.json

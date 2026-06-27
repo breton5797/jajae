@@ -1,0 +1,8 @@
+{
+  "_comment": "PLACEHOLDER — not used by the build. Download the real google-services.json from the Firebase console (Project settings > Your apps > Android app, package name com.jajae.app) and save it as android/app/google-services.json (gitignored). Required to enable FCM push notifications; build.gradle auto-applies the google-services plugin when the real file is present.",
+  "project_info": {
+    "project_number": "YOUR_PROJECT_NUMBER",
+    "project_id": "YOUR_FIREBASE_PROJECT_ID"
+  },
+  "client": []
+}

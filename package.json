@@ -14,7 +14,8 @@
     "cap:sync": "cap sync",
     "cap:android": "cap open android",
     "cap:ios": "cap open ios",
-    "cap:doctor": "cap doctor"
+    "cap:doctor": "cap doctor",
+    "cap:assets": "capacitor-assets generate --ios --android --assetPath assets --iconBackgroundColor '#1A56DB' --iconBackgroundColorDark '#1A56DB' --splashBackgroundColor '#FAFAF8' --splashBackgroundColorDark '#16181D'"
   },
   "dependencies": {
     "@anthropic-ai/sdk": "^0.30.1",
@@ -24,6 +25,7 @@
     "@capacitor/cli": "^8.4.1",
     "@capacitor/core": "^8.4.1",
     "@capacitor/ios": "^8.4.1",
+    "@capacitor/push-notifications": "^8.1.1",
     "@capacitor/splash-screen": "^8.0.1",
     "@capacitor/status-bar": "^8.0.2",
     "@radix-ui/react-label": "^2.1.0",
@@ -42,6 +44,7 @@
     "zustand": "^4.5.5"
   },
   "devDependencies": {
+    "@capacitor/assets": "^3.0.5",
     "@electric-sql/pglite": "^0.2.12",
     "@testing-library/jest-dom": "^6.5.0",
     "@testing-library/react": "^16.0.1",
