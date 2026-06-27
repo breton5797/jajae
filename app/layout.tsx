@@ -2,6 +2,7 @@ import type { Metadata, Viewport } from "next";
 import "./globals.css";
 import { Providers } from "./providers";
 import { SiteHeader } from "@/components/site-header";
+import { SiteFooter } from "@/components/site-footer";
 
 export const metadata: Metadata = {
   title: "자재 — B2B 인테리어·건축자재 플랫폼",
@@ -22,10 +23,11 @@ export default function RootLayout({
 }) {
   return (
     <html lang="ko">
-      <body className="min-h-dvh">
+      <body className="flex min-h-dvh flex-col">
         <Providers>
           <SiteHeader />
-          <main className="container-app py-5">{children}</main>
+          <main className="container-app flex-1 py-5">{children}</main>
+          <SiteFooter />
         </Providers>
       </body>
     </html>

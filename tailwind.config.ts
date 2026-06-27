@@ -34,6 +34,9 @@ const config: Config = {
         success: { DEFAULT: "hsl(142 71% 45%)", foreground: "hsl(0 0% 100%)" },
         warning: { DEFAULT: "hsl(38 92% 50%)", foreground: "hsl(0 0% 100%)" },
         card: { DEFAULT: "hsl(0 0% 100%)", foreground: "hsl(222 47% 11%)" },
+        paper: "#FAFAF8",
+        ink: "#16181D",
+        hairline: "#E7E5E0",
       },
       fontFamily: {
         sans: [
