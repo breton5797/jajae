@@ -1,0 +1,88 @@
+name: Mobile Build
+
+# Manual trigger. Builds the Capacitor Android/iOS apps that wrap the hosted
+# Next.js web app. Without signing secrets the Android job produces a
+# debug-signed AAB and the iOS job runs an unsigned simulator build (CI smoke).
+# Provide the secrets below for a release-signed Android bundle.
+#
+# Required repository secrets for a signed Android release:
+#   ANDROID_KEYSTORE_BASE64     base64 of your release.keystore
+#   ANDROID_KEYSTORE_PASSWORD   keystore password
+#   ANDROID_KEY_ALIAS           key alias (e.g. jajae)
+#   ANDROID_KEY_PASSWORD        key password
+# iOS signed distribution additionally needs Apple Developer certs/profiles
+# (e.g. Fastlane match or apple-actions/import-codesign-certs) — see docs/mobile/README.md.
+
+on:
+  workflow_dispatch:
+    inputs:
+      capServerUrl:
+        description: "URL the app loads (CAP_SERVER_URL)"
+        required: false
+        default: "https://jajae.vercel.app"
+
+jobs:
+  android:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: "20"
+          cache: npm
+      - run: npm ci
+      - uses: actions/setup-java@v4
+        with:
+          distribution: temurin
+          java-version: "21"
+      - uses: android-actions/setup-android@v3
+      - name: Sync Capacitor (Android)
+        env:
+          CAP_SERVER_URL: ${{ github.event.inputs.capServerUrl }}
+        run: npx cap sync android
+      - name: Configure release signing (if secrets set)
+        env:
+          KS_B64: ${{ secrets.ANDROID_KEYSTORE_BASE64 }}
+          KS_PASS: ${{ secrets.ANDROID_KEYSTORE_PASSWORD }}
+          KEY_ALIAS: ${{ secrets.ANDROID_KEY_ALIAS }}
+          KEY_PASS: ${{ secrets.ANDROID_KEY_PASSWORD }}
+        run: |
+          if [ -n "$KS_B64" ]; then
+            echo "$KS_B64" | base64 -d > android/app/release.keystore
+            printf 'storeFile=release.keystore\nstorePassword=%s\nkeyAlias=%s\nkeyPassword=%s\n' \
+              "$KS_PASS" "$KEY_ALIAS" "$KEY_PASS" > android/keystore.properties
+            echo "Release signing configured."
+          else
+            echo "No ANDROID_KEYSTORE_BASE64 secret set — building with debug signing."
+          fi
+      - name: Build Android App Bundle
+        working-directory: android
+        run: ./gradlew bundleRelease --no-daemon
+      - uses: actions/upload-artifact@v4
+        with:
+          name: app-release-aab
+          path: android/app/build/outputs/bundle/release/*.aab
+          if-no-files-found: warn
+
+  ios:
+    runs-on: macos-14
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: "20"
+          cache: npm
+      - run: npm ci
+      - name: Sync Capacitor (iOS)
+        env:
+          CAP_SERVER_URL: ${{ github.event.inputs.capServerUrl }}
+        run: npx cap sync ios
+      - name: Build (simulator, unsigned smoke)
+        run: |
+          xcodebuild -project ios/App/App.xcodeproj \
+            -scheme App -configuration Release \
+            -sdk iphonesimulator -derivedDataPath build \
+            CODE_SIGNING_ALLOWED=NO build
+      # For a signed archive/IPA: import certs (Fastlane match or
+      # apple-actions/import-codesign-certs), then xcodebuild archive +
+      # -exportArchive with your Apple Developer team. See docs/mobile/README.md.
