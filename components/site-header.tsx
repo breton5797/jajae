@@ -36,9 +36,12 @@ export function SiteHeader() {
   const count = useCart((s) => s.lines.length);
 
   return (
-    <header className="sticky top-0 z-40 border-b bg-white/90 backdrop-blur">
-      <div className="container-app flex h-14 items-center justify-between gap-2">
-        <Link href="/" className="flex items-center gap-1.5 font-extrabold">
+    <header className="sticky top-0 z-40 border-b border-hairline bg-paper/85 backdrop-blur">
+      <div className="mx-auto flex h-16 w-full max-w-6xl items-center justify-between gap-2 px-6">
+        <Link
+          href="/"
+          className="flex items-center gap-1.5 font-extrabold text-ink"
+        >
           <span className="grid h-7 w-7 place-items-center rounded-md bg-brand text-white">
             자
           </span>
@@ -53,20 +56,26 @@ export function SiteHeader() {
                 key={href}
                 href={href}
                 className={cn(
-                  "flex items-center gap-1 rounded-md px-2.5 py-1.5 text-sm font-medium text-muted-foreground hover:bg-muted hover:text-foreground",
-                  active && "bg-brand-50 text-brand-700",
+                  "relative flex items-center gap-1 rounded-md px-2.5 py-1.5 text-sm font-medium text-muted-foreground transition-colors hover:text-ink",
+                  active && "text-ink",
                 )}
               >
                 <Icon className="h-4 w-4" />
                 <span className="hidden sm:inline">{label}</span>
+                {active && (
+                  <span
+                    aria-hidden
+                    className="absolute inset-x-2.5 -bottom-[1px] h-0.5 bg-brand"
+                  />
+                )}
               </Link>
             );
           })}
           <Link
             href="/cart"
             className={cn(
-              "relative flex items-center gap-1 rounded-md px-2.5 py-1.5 text-sm font-medium text-muted-foreground hover:bg-muted hover:text-foreground",
-              pathname.startsWith("/cart") && "bg-brand-50 text-brand-700",
+              "relative flex items-center gap-1 rounded-md px-2.5 py-1.5 text-sm font-medium text-muted-foreground transition-colors hover:text-ink",
+              pathname.startsWith("/cart") && "text-ink",
             )}
           >
             <ShoppingCart className="h-4 w-4" />
@@ -75,6 +84,12 @@ export function SiteHeader() {
                 {count}
               </span>
             )}
+          </Link>
+          <Link
+            href="/login"
+            className="ml-1 hidden rounded-md border border-hairline px-3 py-1.5 text-sm font-medium text-ink transition-colors hover:bg-muted sm:inline-flex"
+          >
+            로그인
           </Link>
         </nav>
       </div>
