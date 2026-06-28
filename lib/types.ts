@@ -1279,3 +1279,40 @@ export interface InteriorEstimate {
   status: "draft" | "shared";
   createdAt: string;
 }
+
+/* ---------- 3D 스튜디오 ---------- */
+
+export type StudioDomain =
+  | "interior"
+  | "architecture"
+  | "landscape"
+  | "webtoon_bg"
+  | "stage"
+  | "signage"
+  | "furniture";
+
+export interface Transform3D {
+  position: [number, number, number];
+  rotation: [number, number, number];
+  scale: [number, number, number];
+}
+
+export interface SceneObject {
+  id: string;
+  assetId: string;
+  name: string;
+  transform: Transform3D;
+  color?: string;
+  params?: Record<string, number>;
+}
+
+export interface DesignScene {
+  id: string;
+  domain: StudioDomain;
+  objects: SceneObject[];
+  ground: { type: "floor" | "terrain" | "none"; sizeM: number };
+  camera: {
+    position: [number, number, number];
+    target: [number, number, number];
+  };
+}
