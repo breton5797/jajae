@@ -9,6 +9,7 @@ const COLUMNS = [
       { label: "견적서", href: "/estimate" },
       { label: "공동구매", href: "/group-buy" },
       { label: "3D 스튜디오", href: "/studio" },
+      { label: "즉석 제안", href: "/proposal" },
       { label: "시세", href: "/price-intelligence" },
       { label: "현장 관리", href: "/sites" },
     ],

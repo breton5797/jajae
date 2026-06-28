@@ -16,6 +16,7 @@ import {
   LineChart,
   ClipboardList,
   Box,
+  Presentation,
 } from "lucide-react";
 import { useCart } from "@/lib/store/cart";
 import { cn } from "@/lib/utils";
@@ -26,6 +27,7 @@ const NAV = [
   { href: "/ai-quote", label: "AI견적", icon: Sparkles },
   { href: "/estimate", label: "견적서", icon: ClipboardList },
   { href: "/studio", label: "3D스튜디오", icon: Box },
+  { href: "/proposal", label: "즉석 제안", icon: Presentation },
   { href: "/group-buy", label: "공동구매", icon: Users },
   { href: "/community", label: "커뮤니티", icon: MessageSquare },
   { href: "/forecast", label: "발주예측", icon: LineChart },
