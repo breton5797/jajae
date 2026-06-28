@@ -51,3 +51,7 @@ export function popbillSecretKey(): string | null {
 export function popbillConfigured(): boolean {
   return Boolean(popbillLinkId() && popbillSecretKey());
 }
+
+export function openaiApiKey(): string | null {
+  return process.env.OPENAI_API_KEY ?? null;
+}

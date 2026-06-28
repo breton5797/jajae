@@ -1233,3 +1233,49 @@ export interface AsTriageEval {
   outcome: AsTriageOutcome;
   reasons: string[];
 }
+
+/* ---------- 인테리어 견적서 (Interior Estimate) ---------- */
+
+export interface EstimateRoom {
+  name: string;
+  type: RoomType;     // 기존 RoomType 재사용
+  widthM: number;     // 평면도 배치용 (없으면 area에서 정사각 근사)
+  lengthM: number;
+}
+
+export interface EstimateBrief {
+  projectType: ProjectType;
+  specLevel: SpecLevel;
+  rooms: EstimateRoom[];
+  budgetKRW?: number;
+  materialPrefs?: string[];   // 자유 텍스트 선호 ("화이트 톤 타일" 등)
+  notes?: string;
+}
+
+export interface FloorPlanRoom {
+  name: string;
+  type: RoomType;
+  x: number;
+  y: number;
+  w: number;
+  h: number;
+}
+
+export interface FloorPlan {
+  rooms: FloorPlanRoom[];
+  widthM: number;
+  lengthM: number;
+}
+
+export interface InteriorEstimate {
+  id: string;
+  contractorId: string;
+  customerName?: string;
+  transcript: string;
+  brief: EstimateBrief;
+  floorPlan: FloorPlan;
+  bom: BomResult;
+  totalKRW: number;
+  status: "draft" | "shared";
+  createdAt: string;
+}
