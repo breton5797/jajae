@@ -13,7 +13,8 @@
 | 환경변수 | 미설정 시 동작 | 실 키 주입 시 | 코드 위치 |
 |---|---|---|---|
 | `NEXT_PUBLIC_SUPABASE_URL` / `ANON_KEY` / `SERVICE_ROLE_KEY` | 로컬 placeholder (운영 불가) | 클라우드 DB·Auth·RLS | `lib/supabase/*` |
-| `ANTHROPIC_API_KEY` | 결정론적 BOM 폴백 | 실제 Claude 견적/검색 | `lib/ai-quote/anthropic.ts` |
+| `ANTHROPIC_API_KEY` | 결정론적 BOM 폴백 + 견적서 브리프 폴백 | 실제 Claude 견적/검색/상담 브리프 추출 | `lib/ai-quote/anthropic.ts` · `lib/estimate/brief.ts` |
+| `OPENAI_API_KEY` | 견적서 STT 비활성(수동 전사 입력으로 폴백) | 상담 음성 → Whisper 자동 전사 | `lib/stt/whisper.ts` |
 | `TOSS_SECRET_KEY` / `NEXT_PUBLIC_TOSS_CLIENT_KEY` | 목 결제(`mock:true`) | 실 결제/에스크로 | `lib/payments/toss.ts` |
 | `POPBILL_LINK_ID` + `POPBILL_SECRET_KEY` | 목 세금계산서 | 실 전자세금계산서 | `lib/finance/popbill.ts` |
 | `NEXT_PUBLIC_KAKAO_MAP_KEY` | 지도 그레이스풀 폴백 | 카카오맵 | 클라이언트 |
@@ -32,7 +33,7 @@
   ```bash
   supabase login
   supabase link --project-ref <PROJECT_REF>
-  supabase db push          # supabase/migrations/0001 → 0015 누적 적용
+  supabase db push          # supabase/migrations/0001 → 0016 누적 적용
   ```
 
 - ☐ 🛠 시드 데이터 정책 결정:
@@ -70,7 +71,8 @@
 
 ## 5. 기타 키 🔑
 
-- ☐ 🔑 `ANTHROPIC_API_KEY` — AI 견적 품질 (없으면 폴백으로도 동작하나 정밀도↓)
+- ☐ 🔑 `ANTHROPIC_API_KEY` — AI 견적 품질 + 인테리어 견적서 상담 브리프 추출 (없으면 폴백으로도 동작하나 정밀도↓)
+- ☐ 🔑 `OPENAI_API_KEY` — 인테리어 견적서(`/estimate`)의 상담 음성 STT(Whisper). 미설정 시 STT 비활성 → 사용자가 전사문을 직접 입력하는 폴백으로 동작(기능은 유지). `https://api.openai.com/v1/audio/transcriptions`(model `whisper-1`) 호출 → 비용 발생.
 - ☐ 🔑 `NEXT_PUBLIC_KAKAO_MAP_KEY` — 현장 지도
 
 ---
