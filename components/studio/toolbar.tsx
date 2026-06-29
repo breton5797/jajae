@@ -25,6 +25,10 @@ export interface ToolbarProps {
   onExportOBJ?: () => void;
   onExportSTL?: () => void;
   onExportPNG?: () => void;
+  /** Phase E/F action handlers — undefined = button hidden */
+  onAIRender?: () => void;
+  onSave?: () => void;
+  onOpenLibrary?: () => void;
 }
 
 // ─── Constants ────────────────────────────────────────────────────────────────
@@ -62,6 +66,9 @@ export function Toolbar({
   onExportOBJ,
   onExportSTL,
   onExportPNG,
+  onAIRender,
+  onSave,
+  onOpenLibrary,
 }: ToolbarProps) {
   const handlers: Record<ExportEntry["handlerKey"], (() => void) | undefined> = {
     onExportGLB,
@@ -90,8 +97,42 @@ export function Toolbar({
         </select>
       </div>
 
-      {/* Right: transform mode + export buttons */}
+      {/* Right: actions + transform mode + export buttons */}
       <div className="flex items-center gap-3">
+        {/* Phase E/F actions */}
+        {(onAIRender || onSave || onOpenLibrary) && (
+          <div className="flex items-center gap-1">
+            {onAIRender && (
+              <button
+                type="button"
+                onClick={onAIRender}
+                className="rounded bg-brand px-2.5 py-1 text-xs font-medium text-white transition-colors hover:bg-brand-700"
+                title="현재 화면을 AI 실사로 변환"
+              >
+                AI 실사
+              </button>
+            )}
+            {onSave && (
+              <button
+                type="button"
+                onClick={onSave}
+                className="rounded border border-hairline px-2.5 py-1 text-xs text-ink transition-colors hover:bg-muted"
+              >
+                저장
+              </button>
+            )}
+            {onOpenLibrary && (
+              <button
+                type="button"
+                onClick={onOpenLibrary}
+                className="rounded border border-hairline px-2.5 py-1 text-xs text-ink transition-colors hover:bg-muted"
+              >
+                내 디자인
+              </button>
+            )}
+          </div>
+        )}
+
         {/* Transform mode toggle */}
         <div
           className="flex overflow-hidden rounded-md border border-hairline"

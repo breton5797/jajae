@@ -21,7 +21,7 @@ export const SceneObjectSchema = z.object({
   params: z.record(z.string(), z.number()).optional(),
 });
 
-const StudioDomainSchema = z.enum([
+export const StudioDomainSchema = z.enum([
   "interior",
   "architecture",
   "landscape",
@@ -45,7 +45,23 @@ export const DesignSceneSchema = z.object({
   }),
 });
 
+/** AI 실사 프리뷰 요청(스튜디오 뷰포트 스냅샷 → 도메인 맞춤 포토리얼). */
+export const StudioRenderSchema = z.object({
+  imageBase64: z.string().min(1), // 뷰포트 스냅샷 dataURL
+  domain: StudioDomainSchema,
+});
+
+/** design_scenes 저장 페이로드(에디터 → 영속화 경계). */
+export const SaveScenePayloadSchema = z.object({
+  name: z.string().min(1).max(120),
+  domain: StudioDomainSchema,
+  scene: DesignSceneSchema,
+  thumbnailUrl: z.string().url().optional(),
+});
+
 // Inferred types (optional consumers may prefer these over lib/types)
 export type Transform3DParsed = z.infer<typeof Transform3DSchema>;
 export type SceneObjectParsed = z.infer<typeof SceneObjectSchema>;
 export type DesignSceneParsed = z.infer<typeof DesignSceneSchema>;
+export type StudioRenderParsed = z.infer<typeof StudioRenderSchema>;
+export type SaveScenePayloadParsed = z.infer<typeof SaveScenePayloadSchema>;
