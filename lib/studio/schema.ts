@@ -56,7 +56,7 @@ export const SaveScenePayloadSchema = z.object({
   name: z.string().min(1).max(120),
   domain: StudioDomainSchema,
   scene: DesignSceneSchema,
-  thumbnailUrl: z.string().url().optional(),
+  snapshot: z.string().optional(), // 썸네일용 PNG dataURL — 서버가 Storage 업로드
 });
 
 // Inferred types (optional consumers may prefer these over lib/types)

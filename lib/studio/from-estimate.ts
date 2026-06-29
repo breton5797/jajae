@@ -18,6 +18,8 @@ const ROOM_FURNITURE: Partial<Record<RoomType, string>> = {
 
 const FLOOR_COLOR = "#C7A878";
 const FLOOR_THICKNESS = 0.1;
+/** wall 에셋의 기본 x 길이(m) — 경계 외벽 스케일 계산 기준(assets.ts wall box size[0]). */
+const WALL_UNIT = 4;
 
 const identityScale = (): [number, number, number] => [1, 1, 1];
 const noRotation = (): [number, number, number] => [0, 0, 0];
@@ -71,6 +73,29 @@ export function floorPlanToDesignScene(floorPlan: FloorPlan): DesignScene {
         },
       });
     }
+  }
+
+  // 평면도 경계 4면 외벽. wall 에셋은 x로 4m 길이 → 변 길이/4로 스케일.
+  // N/S 벽은 x축(폭)을 따르고, E/W 벽은 90° 회전해 z축(길이)을 따른다.
+  const WALL_W = widthM / WALL_UNIT;
+  const WALL_L = lengthM / WALL_UNIT;
+  const perimeter: Array<{ pos: [number, number, number]; rotY: number; len: number }> = [
+    { pos: [0, 0, -lengthM / 2], rotY: 0, len: WALL_W }, // North
+    { pos: [0, 0, lengthM / 2], rotY: 0, len: WALL_W }, // South
+    { pos: [-widthM / 2, 0, 0], rotY: Math.PI / 2, len: WALL_L }, // West
+    { pos: [widthM / 2, 0, 0], rotY: Math.PI / 2, len: WALL_L }, // East
+  ];
+  for (const w of perimeter) {
+    objects.push({
+      id: nextId(),
+      assetId: "wall",
+      name: "외벽",
+      transform: {
+        position: w.pos,
+        rotation: [0, w.rotY, 0],
+        scale: [w.len, 1, 1],
+      },
+    });
   }
 
   return {

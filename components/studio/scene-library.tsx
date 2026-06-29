@@ -98,11 +98,25 @@ export function SceneLibrary({ open, onClose, onLoad }: SceneLibraryProps) {
               <button
                 type="button"
                 onClick={() => onLoad(s.id)}
-                className="flex-1 text-left"
+                className="flex min-w-0 flex-1 items-center gap-2 text-left"
               >
-                <span className="block text-sm font-medium text-ink">{s.name}</span>
-                <span className="block text-xs text-muted-foreground">
-                  {s.domain} · {new Date(s.created_at).toLocaleDateString("ko-KR")}
+                {s.thumbnail_url ? (
+                  // eslint-disable-next-line @next/next/no-img-element
+                  <img
+                    src={s.thumbnail_url}
+                    alt=""
+                    className="h-10 w-14 shrink-0 rounded border border-hairline object-cover"
+                  />
+                ) : (
+                  <span className="flex h-10 w-14 shrink-0 items-center justify-center rounded border border-hairline bg-muted text-[10px] text-muted-foreground">
+                    {s.domain}
+                  </span>
+                )}
+                <span className="min-w-0">
+                  <span className="block truncate text-sm font-medium text-ink">{s.name}</span>
+                  <span className="block text-xs text-muted-foreground">
+                    {s.domain} · {new Date(s.created_at).toLocaleDateString("ko-KR")}
+                  </span>
                 </span>
               </button>
               <button
