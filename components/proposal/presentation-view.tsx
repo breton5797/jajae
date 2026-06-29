@@ -106,6 +106,7 @@ export function PresentationView({ data }: { data: PresentationData }) {
             constructionKRW={data.constructionKRW}
             totalKRW={data.totalKRW}
             title={title}
+            template={data.template}
             onSnapshot={setSnapshot}
           />
         ) : (

@@ -2,16 +2,18 @@
 
 /**
  * components/proposal/proposal-sheet.tsx
- * 이미지 #1 합성 — 좌: 3D 캔버스(hero), 우: 자재 패널, 하단: 특징 4컷.
- * 3D 캔버스는 next/dynamic({ ssr:false })로 로드(three.js 서버 임포트 차단).
- * "AI 실사 변환": 3D 스냅샷을 /api/proposal/render 로 보내 포토리얼 이미지로 교체
- * (키 미설정 시 원본 3D 렌더 유지 — graceful fallback).
+ * 이미지 #1 합성 — 좌: 3D 캔버스(hero), 우: 자재 패널, 하단: 특징 4컷 + 영림 컬러 매치.
+ * - "AI 실사 변환": 3D 스냅샷 → /api/proposal/render (키 없으면 원본 유지).
+ * - 영림 컬러 적용: 겹치는 카테고리 자재/예산 교체 + 3D 바닥·벽 색 반영.
  */
 
 import dynamic from "next/dynamic";
-import { useState } from "react";
-import type { FinishSelection } from "@/lib/types";
+import { useMemo, useState } from "react";
+import type { ApartmentTemplate, FinishSelection } from "@/lib/types";
 import type { FurnishedScene } from "@/lib/studio/from-floorplan";
+import type { YeongnimColor } from "@/lib/proposal/yeongnim";
+import { applyYeongnimToFinishes } from "@/lib/proposal/apply-yeongnim";
+import { materialsTotal } from "@/lib/proposal/materials";
 import { MaterialPanel } from "./material-panel";
 import { YeongnimMatch } from "./yeongnim-match";
 
@@ -32,6 +34,20 @@ const HIGHLIGHTS = [
   { t: "밝고 쾌적한 공간", d: "남향 위주 배치와 넉넉한 채광" },
 ];
 
+const won = (n: number) => `${n.toLocaleString("ko-KR")}원`;
+
+/** hex를 흰색 쪽으로 섞어 밝게(벽 색용). */
+function lighten(hex: string, amt = 0.45): string {
+  const m = /^#?([0-9a-fA-F]{6})$/.exec(hex.trim());
+  if (!m) return hex;
+  const n = parseInt(m[1]!, 16);
+  const mix = (c: number) => Math.round(c + (255 - c) * amt);
+  const r = mix((n >> 16) & 255);
+  const g = mix((n >> 8) & 255);
+  const b = mix(n & 255);
+  return `#${[r, g, b].map((v) => v.toString(16).padStart(2, "0")).join("")}`;
+}
+
 export function ProposalSheet({
   scene,
   finishes,
@@ -39,6 +55,7 @@ export function ProposalSheet({
   constructionKRW,
   totalKRW,
   title,
+  template,
   onSnapshot,
 }: {
   scene: FurnishedScene;
@@ -47,12 +64,29 @@ export function ProposalSheet({
   constructionKRW: number;
   totalKRW: number;
   title: string;
+  template: ApartmentTemplate;
   onSnapshot?: (d: string) => void;
 }) {
   const [snapshot, setSnapshot] = useState<string | null>(null);
   const [aiImage, setAiImage] = useState<string | null>(null);
   const [aiBusy, setAiBusy] = useState(false);
   const [aiNote, setAiNote] = useState<string | null>(null);
+  const [applied, setApplied] = useState<YeongnimColor | null>(null);
+
+  // 영림 컬러 적용 시: 겹치는 카테고리 자재 교체 → 예산/3D 색 반영
+  const effFinishes = useMemo(
+    () => (applied ? applyYeongnimToFinishes(finishes, applied, template) : finishes),
+    [applied, finishes, template],
+  );
+  const effMaterials = applied ? materialsTotal(effFinishes) : materialsKRW;
+  const effTotal = effMaterials + constructionKRW;
+  const effScene = useMemo(
+    () =>
+      applied?.color
+        ? { ...scene, floorColor: applied.color, wallColor: lighten(applied.color) }
+        : scene,
+    [applied, scene],
+  );
 
   const handleSnapshot = (d: string) => {
     setSnapshot(d);
@@ -117,6 +151,17 @@ export function ProposalSheet({
           {aiNote}
         </p>
       )}
+      {applied && (
+        <p className="rounded-md bg-paper px-3 py-2 text-xs">
+          <span className="font-semibold">영림 {applied.series}</span> 적용됨 — 마루·도어·키친·수납을 영림으로 통일.
+          예상 총액 {won(totalKRW)} → <span className="font-semibold">{won(effTotal)}</span>
+          {effTotal !== totalKRW && (
+            <span className={effTotal > totalKRW ? "text-amber-600" : "text-emerald-600"}>
+              {" "}({effTotal > totalKRW ? "+" : ""}{won(effTotal - totalKRW)})
+            </span>
+          )}
+        </p>
+      )}
       <div className="grid gap-6 lg:grid-cols-[2fr_1fr]">
         <div className="relative">
           {aiImage ? (
@@ -127,7 +172,7 @@ export function ProposalSheet({
               className="aspect-[4/3] w-full rounded-xl border border-hairline object-cover"
             />
           ) : (
-            <ProposalCanvas scene={scene} onSnapshot={handleSnapshot} />
+            <ProposalCanvas scene={effScene} onSnapshot={handleSnapshot} />
           )}
           {aiBusy && (
             <div className="absolute inset-0 flex items-center justify-center rounded-xl bg-black/30 text-sm font-medium text-white">
@@ -136,10 +181,10 @@ export function ProposalSheet({
           )}
         </div>
         <MaterialPanel
-          finishes={finishes}
-          materialsKRW={materialsKRW}
+          finishes={effFinishes}
+          materialsKRW={effMaterials}
           constructionKRW={constructionKRW}
-          totalKRW={totalKRW}
+          totalKRW={effTotal}
         />
       </div>
       <ul className="grid grid-cols-2 gap-4 border-t border-hairline pt-4 md:grid-cols-4">
@@ -150,7 +195,11 @@ export function ProposalSheet({
           </li>
         ))}
       </ul>
-      <YeongnimMatch />
+      <YeongnimMatch
+        template={template}
+        appliedSeries={applied?.series ?? null}
+        onApply={setApplied}
+      />
     </div>
   );
 }

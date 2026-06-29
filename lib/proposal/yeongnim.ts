@@ -7,10 +7,12 @@
 export interface YeongnimItem {
   category: string;
   modelCode: string;
+  unitPrice?: number;
 }
 export interface YeongnimColor {
   series: string;
   patternGroup: string;
+  color?: string; // 대표 hex (3D 틴트용)
   items: YeongnimItem[];
 }
 export interface YeongnimRow {
@@ -18,6 +20,8 @@ export interface YeongnimRow {
   patternGroup: string | null;
   category: string;
   modelCode: string;
+  unitPrice?: number | null;
+  color?: string | null;
 }
 
 /** 컬러 매치 표시 대상 카테고리 + 정렬 순서(창호 제외 — 인테리어 마감만). */
@@ -43,11 +47,21 @@ export function groupYeongnimColors(rows: YeongnimRow[]): YeongnimColor[] {
     if (!(MATCH_CATEGORIES as readonly string[]).includes(r.category)) continue;
     let color = bySeries.get(r.series);
     if (!color) {
-      color = { series: r.series, patternGroup: r.patternGroup ?? "기타", items: [] };
+      color = {
+        series: r.series,
+        patternGroup: r.patternGroup ?? "기타",
+        color: r.color ?? undefined,
+        items: [],
+      };
       bySeries.set(r.series, color);
     }
+    if (!color.color && r.color) color.color = r.color;
     if (!color.items.some((it) => it.category === r.category)) {
-      color.items.push({ category: r.category, modelCode: r.modelCode });
+      color.items.push({
+        category: r.category,
+        modelCode: r.modelCode,
+        unitPrice: r.unitPrice ?? undefined,
+      });
     }
   }
   const colors = Array.from(bySeries.values());
