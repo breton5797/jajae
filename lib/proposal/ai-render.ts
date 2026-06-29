@@ -9,6 +9,8 @@ import {
   studioRenderProvider, studioRenderQuality,
 } from "@/lib/env";
 
+export type RenderKind = "interior" | "floorplan";
+
 export interface RenderResult {
   imageUrl: string; // dataURL 또는 원격 URL
   provider: string;
@@ -16,12 +18,28 @@ export interface RenderResult {
   note?: string;
 }
 
-const DEFAULT_PROMPT =
-  "Transform this 3D dollhouse floor-plan render into a photorealistic interior " +
-  "photograph. Preserve the exact same room layout, wall positions, and furniture " +
-  "placement. Warm natural daylight, premium modern Korean apartment finishes, " +
-  "wood flooring, soft realistic shadows, architectural-visualization quality, " +
-  "clean and bright. Keep the same elevated angled viewpoint.";
+/** 종류별 프롬프트 — interior(3D 돌하우스→실내사진), floorplan(도식 평면도→실사 평면도). */
+const PROMPTS: Record<RenderKind, string> = {
+  interior:
+    "Transform this 3D dollhouse floor-plan render into a photorealistic interior " +
+    "photograph. Preserve the exact same room layout, wall positions, and furniture " +
+    "placement. Warm natural daylight, premium modern Korean apartment finishes, " +
+    "wood flooring, soft realistic shadows, architectural-visualization quality, " +
+    "clean and bright. Keep the same elevated angled viewpoint.",
+  floorplan:
+    "Convert this schematic top-down 2D apartment floor plan into a photorealistic " +
+    "architectural floor-plan illustration, top-down view. Keep the EXACT same room " +
+    "layout, walls, proportions, and the Korean room-name labels. Add realistic " +
+    "light wood-tone flooring, dark walls, furnishings (beds with bedding, sofa, " +
+    "dining table with chairs, kitchen counter with sink and cooktop, bathroom " +
+    "fixtures, wardrobes), area rugs, and a few potted plants — like a premium " +
+    "Korean apartment floor-plan rendering.",
+};
+
+const FALLBACK_NOTE: Record<RenderKind, string> = {
+  interior: "원본 3D 렌더를 표시합니다.",
+  floorplan: "도식 평면도를 표시합니다.",
+};
 
 function resolveProvider(): { provider: string; key: string } | null {
   const explicitKey = studioRenderApiKey();
@@ -29,6 +47,11 @@ function resolveProvider(): { provider: string; key: string } | null {
   const oa = openaiApiKey();
   if (oa) return { provider: "openai", key: oa };
   return null;
+}
+
+/** AI 렌더 키가 설정돼 실제 생성이 가능한지(클라이언트 auto-run 판단용). */
+export function renderAvailable(): boolean {
+  return resolveProvider() !== null;
 }
 
 /**
@@ -67,34 +90,36 @@ async function openaiEdit(
 
 export async function renderPhotoreal(
   imageDataUrl: string,
-  prompt?: string,
+  opts?: { prompt?: string; kind?: RenderKind },
 ): Promise<RenderResult> {
+  const kind: RenderKind = opts?.kind ?? "interior";
+  const prompt = opts?.prompt ?? PROMPTS[kind];
   const cfg = resolveProvider();
   if (!cfg) {
     return {
       imageUrl: imageDataUrl,
       provider: "none",
       mock: true,
-      note: "AI 렌더 키 미설정 — 원본 3D 렌더를 표시합니다.",
+      note: `AI 렌더 키 미설정 — ${FALLBACK_NOTE[kind]}`,
     };
   }
   try {
     if (cfg.provider === "openai") {
-      const out = await openaiEdit(imageDataUrl, prompt ?? DEFAULT_PROMPT, cfg.key);
+      const out = await openaiEdit(imageDataUrl, prompt, cfg.key);
       if (out) return { imageUrl: out, provider: "openai", mock: false };
     }
     return {
       imageUrl: imageDataUrl,
       provider: cfg.provider,
       mock: true,
-      note: "AI 렌더를 사용할 수 없어 원본 3D 렌더를 표시합니다.",
+      note: `AI 렌더를 사용할 수 없어 ${FALLBACK_NOTE[kind]}`,
     };
   } catch {
     return {
       imageUrl: imageDataUrl,
       provider: cfg.provider,
       mock: true,
-      note: "AI 렌더 처리 중 오류 — 원본 3D 렌더를 표시합니다.",
+      note: `AI 렌더 처리 중 오류 — ${FALLBACK_NOTE[kind]}`,
     };
   }
 }

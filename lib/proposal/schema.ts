@@ -38,8 +38,9 @@ export const SharedAccessSchema = z.object({
 });
 
 export const RenderInputSchema = z.object({
-  imageBase64: z.string().min(1), // 3D 스냅샷 dataURL
+  imageBase64: z.string().min(1), // 3D 스냅샷/평면도 dataURL
   prompt: z.string().optional(),
+  kind: z.enum(["interior", "floorplan"]).optional(),
 });
 
 export const FinishMaterialSchema = z.object({

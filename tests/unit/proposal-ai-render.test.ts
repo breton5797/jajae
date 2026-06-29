@@ -30,7 +30,7 @@ describe("renderPhotoreal", () => {
       return { ok: true, json: async () => ({ data: [{ b64_json: fakeB64 }] }) } as Response;
     });
 
-    const r = await renderPhotoreal("data:image/png;base64,AAAA", "테스트 프롬프트");
+    const r = await renderPhotoreal("data:image/png;base64,AAAA", { prompt: "테스트 프롬프트" });
 
     expect(r.mock).toBe(false);
     expect(r.provider).toBe("openai");
@@ -46,6 +46,19 @@ describe("renderPhotoreal", () => {
     expect(form.get("size")).toBe("1536x1024");
     expect(form.get("input_fidelity")).toBe("high"); // 구조 보존
     expect(form.get("image[]")).toBeTruthy(); // 배열 필드명
+  });
+
+  it("kind=floorplan → 평면도 프롬프트로 요청", async () => {
+    vi.stubEnv("OPENAI_API_KEY", "sk-test");
+    vi.stubEnv("STUDIO_RENDER_API_KEY", "");
+    let captured: { init: RequestInit } | null = null;
+    vi.stubGlobal("fetch", async (_url: string, init: RequestInit) => {
+      captured = { init };
+      return { ok: true, json: async () => ({ data: [{ b64_json: "QQ==" }] }) } as Response;
+    });
+    await renderPhotoreal("data:image/png;base64,AAAA", { kind: "floorplan" });
+    const form = captured!.init.body as FormData;
+    expect(String(form.get("prompt"))).toContain("floor plan");
   });
 
   it("OpenAI 실패(non-200) → mock 폴백", async () => {

@@ -8,7 +8,7 @@
  */
 
 import dynamic from "next/dynamic";
-import { useMemo, useState } from "react";
+import { useEffect, useMemo, useRef, useState } from "react";
 import type { ApartmentTemplate, FinishSelection } from "@/lib/types";
 import type { FurnishedScene } from "@/lib/studio/from-floorplan";
 import type { YeongnimColor } from "@/lib/proposal/yeongnim";
@@ -116,6 +116,20 @@ export function ProposalSheet({
       setAiBusy(false);
     }
   };
+
+  // 키 설정 시 3D도 자동 실사 변환(스냅샷 준비 후 1회)
+  const autoTried = useRef(false);
+  useEffect(() => {
+    if (autoTried.current || !snapshot) return;
+    autoTried.current = true;
+    fetch("/api/proposal/render")
+      .then((r) => (r.ok ? r.json() : { available: false }))
+      .then((j: { available?: boolean }) => {
+        if (j.available) void beautify();
+      })
+      .catch(() => {});
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [snapshot]);
 
   return (
     <div className="flex flex-col gap-6 rounded-2xl bg-white p-6 shadow-sm">
