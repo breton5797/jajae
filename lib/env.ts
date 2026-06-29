@@ -55,3 +55,20 @@ export function popbillConfigured(): boolean {
 export function openaiApiKey(): string | null {
   return process.env.OPENAI_API_KEY ?? null;
 }
+
+export function studioRenderProvider(): string | null {
+  return process.env.STUDIO_RENDER_PROVIDER ?? null;
+}
+
+export function studioRenderApiKey(): string | null {
+  return process.env.STUDIO_RENDER_API_KEY ?? null;
+}
+
+export function studioRenderModel(): string {
+  return process.env.STUDIO_RENDER_MODEL ?? "gpt-image-1";
+}
+
+export function studioRenderQuality(): string {
+  // 기본 medium: 속도/비용 균형(high는 90~165초). 필요 시 STUDIO_RENDER_QUALITY=high.
+  return process.env.STUDIO_RENDER_QUALITY ?? "medium";
+}

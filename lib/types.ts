@@ -1247,6 +1247,7 @@ export interface EstimateBrief {
   projectType: ProjectType;
   specLevel: SpecLevel;
   rooms: EstimateRoom[];
+  pyeong?: number;            // 상담에서 나온 평수 (없으면 룸 면적에서 도출)
   budgetKRW?: number;
   materialPrefs?: string[];   // 자유 텍스트 선호 ("화이트 톤 타일" 등)
   notes?: string;
@@ -1277,5 +1278,116 @@ export interface InteriorEstimate {
   bom: BomResult;
   totalKRW: number;
   status: "draft" | "shared";
+  createdAt: string;
+}
+
+/* ---------- 3D 스튜디오 ---------- */
+
+export type StudioDomain =
+  | "interior"
+  | "architecture"
+  | "landscape"
+  | "webtoon_bg"
+  | "stage"
+  | "signage"
+  | "furniture";
+
+export interface Transform3D {
+  position: [number, number, number];
+  rotation: [number, number, number];
+  scale: [number, number, number];
+}
+
+export interface SceneObject {
+  id: string;
+  assetId: string;
+  name: string;
+  transform: Transform3D;
+  color?: string;
+  params?: Record<string, number>;
+}
+
+export interface DesignScene {
+  id: string;
+  domain: StudioDomain;
+  objects: SceneObject[];
+  ground: { type: "floor" | "terrain" | "none"; sizeM: number };
+  camera: {
+    position: [number, number, number];
+    target: [number, number, number];
+  };
+}
+
+/* ---------- 즉석 제안 생성기 (instant proposal) ---------- */
+
+export type FinishTier = "economy" | "standard" | "premium";
+
+export type FinishCategory =
+  | "flooring" | "wallpaper" | "paint" | "tile" | "window" | "door"
+  | "kitchen" | "sanitaryware" | "lighting" | "film" | "board"
+  | "engineered_stone" | "furniture" | "molding";
+
+export interface MaterialBrand {
+  id: string;
+  name: string;
+  categories: FinishCategory[];
+  isImport: boolean;
+  segment: "major" | "specialist" | "distributor";
+  note?: string;
+}
+
+export interface FinishMaterial {
+  id: string;
+  category: FinishCategory;
+  tier: FinishTier;
+  brandId: string;
+  brandName?: string;          // 패널 표시용(조인 비정규화)
+  label: string;
+  unitPrice: number;
+  priceStatus: "confirmed" | "estimated";
+  color?: string;              // 3D 틴트용 hex(없으면 기본색)
+  swatchUrl?: string;
+  spec?: string;
+}
+
+export interface FinishSelection {
+  category: FinishCategory;
+  material: FinishMaterial;
+  qty: number;
+  lineTotal: number;           // round(qty * unitPrice)
+  downgraded: boolean;         // baseTier보다 낮게 선택됨
+}
+
+export interface RoomSlot {
+  name: string;
+  type: RoomType;
+  x: number; y: number; w: number; h: number;
+}
+
+export interface ApartmentTemplate {
+  id: string;
+  pyeongBand: 10 | 20 | 30 | 40 | 50;
+  exclusiveM2: number;
+  supplyM2: number;
+  bedrooms: number;
+  bathrooms: number;
+  rooms: RoomSlot[];
+  furniture: { assetId: string; roomName: string; transform: Transform3D }[];
+}
+
+export interface Proposal {
+  id: string;
+  estimateId: string;
+  contractorId: string;
+  customerName?: string;
+  templateId: string;
+  finishes: FinishSelection[];
+  snapshotUrl?: string;
+  materialsKRW: number;
+  constructionKRW: number;
+  totalKRW: number;
+  status: "draft" | "shared";
+  shareToken?: string;
+  shareExpiresAt?: string;
   createdAt: string;
 }

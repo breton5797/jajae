@@ -733,6 +733,9 @@ function StepResult({ result, onNext }: StepResultProps) {
           <Button onClick={onNext} className="w-full">
             저장 완료 확인 →
           </Button>
+          <Button asChild variant="outline" className="w-full">
+            <Link href="/proposal">제안서로 보기 →</Link>
+          </Button>
         </CardFooter>
       </Card>
     </div>
