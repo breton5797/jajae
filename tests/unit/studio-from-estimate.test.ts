@@ -29,12 +29,36 @@ describe("floorPlanToDesignScene", () => {
     expect(floors.length).toBe(4); // 룸 4개
 
     const furnitureIds = scene.objects
-      .filter((o) => o.assetId !== "box")
+      .filter((o) => ["sofa", "bed", "table"].includes(o.assetId))
       .map((o) => o.assetId)
       .sort();
     // living→sofa, room→bed, kitchen→table, bathroom→없음
     expect(furnitureIds).toEqual(["bed", "sofa", "table"]);
-    expect(scene.objects.length).toBe(7);
+    // 바닥 4 + 가구 3 + 외벽 4 = 11
+    expect(scene.objects.length).toBe(11);
+  });
+
+  it("평면도 경계에 4면 외벽을 만든다", () => {
+    const scene = floorPlanToDesignScene(plan);
+    const walls = scene.objects.filter((o) => o.assetId === "wall");
+    expect(walls.length).toBe(4);
+
+    // 외벽은 평면도 경계(±width/2 x, ±length/2 z)에 위치. width=8,length=6.
+    const positions = walls.map((w) => w.transform.position);
+    expect(positions).toContainEqual([0, 0, -3]); // North
+    expect(positions).toContainEqual([0, 0, 3]); // South
+    expect(positions).toContainEqual([-4, 0, 0]); // West
+    expect(positions).toContainEqual([4, 0, 0]); // East
+
+    // x축 벽(N/S)은 폭에 맞춰 스케일, 회전 없음
+    const northWall = walls.find((w) => w.transform.position[2] === -3)!;
+    expect(northWall.transform.rotation[1]).toBe(0);
+    expect(northWall.transform.scale[0]).toBe(2); // widthM/4 = 8/4
+
+    // z축 벽(E/W)은 90도 회전 + 길이에 맞춰 스케일
+    const westWall = walls.find((w) => w.transform.position[0] === -4)!;
+    expect(westWall.transform.rotation[1]).toBeCloseTo(Math.PI / 2);
+    expect(westWall.transform.scale[0]).toBe(1.5); // lengthM/4 = 6/4
   });
 
   it("바닥 슬래브는 룸 footprint로 스케일되고 원점 기준 중앙 정렬된다", () => {

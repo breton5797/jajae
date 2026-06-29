@@ -184,11 +184,14 @@ export default function StudioPage() {
   const handleSave = useCallback(async () => {
     const name = window.prompt("디자인 이름을 입력하세요", `${scene.domain} 시안`);
     if (!name) return;
+    // 현재 뷰포트를 썸네일 스냅샷으로 첨부(있으면).
+    const ctx = threeCtxRef.current;
+    const snapshot = ctx ? exportPNG(ctx) : undefined;
     try {
       const res = await fetch("/api/studio/scenes", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ name, domain: scene.domain, scene }),
+        body: JSON.stringify({ name, domain: scene.domain, scene, snapshot }),
       });
       if (res.status === 401) {
         window.alert("저장하려면 로그인이 필요합니다.");
