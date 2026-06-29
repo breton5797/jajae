@@ -736,6 +736,11 @@ function StepResult({ result, onNext }: StepResultProps) {
           <Button asChild variant="outline" className="w-full">
             <Link href="/proposal">제안서로 보기 →</Link>
           </Button>
+          <Button asChild variant="outline" className="w-full">
+            <Link href={`/studio?from=estimate&id=${result.id}`}>
+              3D 스튜디오에서 편집 →
+            </Link>
+          </Button>
         </CardFooter>
       </Card>
     </div>
