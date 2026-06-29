@@ -55,3 +55,11 @@ export function popbillConfigured(): boolean {
 export function openaiApiKey(): string | null {
   return process.env.OPENAI_API_KEY ?? null;
 }
+
+export function studioRenderProvider(): string | null {
+  return process.env.STUDIO_RENDER_PROVIDER ?? null;
+}
+
+export function studioRenderApiKey(): string | null {
+  return process.env.STUDIO_RENDER_API_KEY ?? null;
+}

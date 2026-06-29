@@ -3,6 +3,7 @@ import {
   ProposalInputSchema,
   ShareInputSchema,
   SharedAccessSchema,
+  RenderInputSchema,
 } from "@/lib/proposal/schema";
 
 const VALID_BRIEF = {
@@ -31,5 +32,11 @@ describe("proposal zod schemas", () => {
   it("SharedAccessSchema: 비밀번호 필수", () => {
     expect(SharedAccessSchema.safeParse({}).success).toBe(false);
     expect(SharedAccessSchema.safeParse({ password: "1234" }).success).toBe(true);
+  });
+
+  it("RenderInputSchema: imageBase64 필수, prompt 선택", () => {
+    expect(RenderInputSchema.safeParse({}).success).toBe(false);
+    expect(RenderInputSchema.safeParse({ imageBase64: "data:image/png;base64,AAAA" }).success).toBe(true);
+    expect(RenderInputSchema.safeParse({ imageBase64: "x", prompt: "실사로" }).success).toBe(true);
   });
 });
