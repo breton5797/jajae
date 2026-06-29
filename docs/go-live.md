@@ -14,7 +14,8 @@
 |---|---|---|---|
 | `NEXT_PUBLIC_SUPABASE_URL` / `ANON_KEY` / `SERVICE_ROLE_KEY` | 로컬 placeholder (운영 불가) | 클라우드 DB·Auth·RLS | `lib/supabase/*` |
 | `ANTHROPIC_API_KEY` | 결정론적 BOM 폴백 + 견적서 브리프 폴백 | 실제 Claude 견적/검색/상담 브리프 추출 | `lib/ai-quote/anthropic.ts` · `lib/estimate/brief.ts` |
-| `OPENAI_API_KEY` | 견적서 STT 비활성(수동 전사 입력으로 폴백) | 상담 음성 → Whisper 자동 전사 | `lib/stt/whisper.ts` |
+| `OPENAI_API_KEY` | STT 비활성(수동 전사 폴백) + AI 실사 미설정(원본 스냅샷 폴백) | Whisper STT + 제안서/스튜디오 AI 포토리얼(gpt-image-1) | `lib/stt/whisper.ts` · `lib/render/image-edit.ts` |
+| `STUDIO_RENDER_*` (선택) | 미설정 시 `OPENAI_API_KEY` 사용 | AI 렌더 provider/키/모델/품질 오버라이드 | `lib/env.ts` · `lib/render/image-edit.ts` |
 | `TOSS_SECRET_KEY` / `NEXT_PUBLIC_TOSS_CLIENT_KEY` | 목 결제(`mock:true`) | 실 결제/에스크로 | `lib/payments/toss.ts` |
 | `POPBILL_LINK_ID` + `POPBILL_SECRET_KEY` | 목 세금계산서 | 실 전자세금계산서 | `lib/finance/popbill.ts` |
 | `NEXT_PUBLIC_KAKAO_MAP_KEY` | 지도 그레이스풀 폴백 | 카카오맵 | 클라이언트 |
@@ -33,13 +34,22 @@
   ```bash
   supabase login
   supabase link --project-ref <PROJECT_REF>
-  supabase db push          # supabase/migrations/0001 → 0016 누적 적용
+  supabase migration list      # 원격 적용 상태 먼저 확인(운영 기준선: 0016까지 적용됨)
+  supabase db push             # supabase/migrations/0001 → 0021 누적(미적용분만 적용)
   ```
 
+  > 0017~0021은 전부 **additive**(material_catalog·proposals·yeongnim·design_scenes). 파괴적 DDL 없음.
+  > 0018은 pgcrypto(공유 비밀번호 bcrypt)를 DO 블록으로 감싸 자동 생성한다.
+
+- ☐ 🛠 **Storage 버킷/정책 적용** — `supabase db push`는 `migrations/`만 적용하므로 `supabase/storage.sql`은 **별도 1회 실행**(멱등 — 재실행 안전):
+  - Supabase 대시보드 → SQL Editor에 `supabase/storage.sql` 내용 붙여넣기 실행, 또는
+  - `psql "$DATABASE_URL" -f supabase/storage.sql`
+  - 생성 버킷: `drawings`·`site-docs`(비공개) · `proposal-snapshots`(공개 — 제안서 3D 스냅샷 공유 링크용)
 - ☐ 🛠 시드 데이터 정책 결정:
   - `supabase/seed.sql`은 **로컬 개발/테스트용 더미 데이터**다. 운영 DB에 그대로 넣지 말 것.
+  - 단, 마이그레이션 0019/0020(영림 e카탈로그·샘플단가)은 **카탈로그 reference 데이터**라 db push로 함께 적용된다(시드 아님).
   - 운영은 실제 카탈로그/공급사 데이터로 별도 적재. (필요 시 시드에서 카테고리·관리자 계정만 발췌)
-- ☐ 🛠 마이그레이션 적용 확인: Supabase 대시보드 → Database → 테이블/트리거(`enforce_agent_policy` 등) 존재 확인
+- ☐ 🛠 마이그레이션 적용 확인: Supabase 대시보드 → Database → 신규 테이블 존재 확인 — `material_brands`·`finish_materials`(0017), `proposals`(0018), `material_catalog_items`(0019), `design_scenes`(0021), 트리거(`enforce_agent_policy` 등)
 
 ---
 
@@ -72,7 +82,8 @@
 ## 5. 기타 키 🔑
 
 - ☐ 🔑 `ANTHROPIC_API_KEY` — AI 견적 품질 + 인테리어 견적서 상담 브리프 추출 (없으면 폴백으로도 동작하나 정밀도↓)
-- ☐ 🔑 `OPENAI_API_KEY` — 인테리어 견적서(`/estimate`)의 상담 음성 STT(Whisper). 미설정 시 STT 비활성 → 사용자가 전사문을 직접 입력하는 폴백으로 동작(기능은 유지). `https://api.openai.com/v1/audio/transcriptions`(model `whisper-1`) 호출 → 비용 발생.
+- ☐ 🔑 `OPENAI_API_KEY` — (1) 견적서(`/estimate`) 상담 음성 STT(Whisper, `whisper-1`). 미설정 시 수동 전사 폴백. (2) **제안서(`/proposal`)·스튜디오(`/studio`) AI 포토리얼 실사**(`gpt-image-1` img2img, `lib/render/image-edit.ts`). 미설정 시 원본 스냅샷 폴백. **비용 발생**, 고품질은 90~165초/장 → Vercel Pro(maxDuration 300s) 필요. `STUDIO_RENDER_QUALITY=medium`(기본)으로 단축 가능.
+- ☐ 🔑 `STUDIO_RENDER_PROVIDER`/`STUDIO_RENDER_API_KEY`/`STUDIO_RENDER_MODEL`/`STUDIO_RENDER_QUALITY` (선택) — AI 렌더 오버라이드. 미설정 시 `OPENAI_API_KEY`+gpt-image-1+medium 사용.
 - ☐ 🔑 `NEXT_PUBLIC_KAKAO_MAP_KEY` — 현장 지도
 
 ---
@@ -94,7 +105,7 @@
 ```bash
 npm run typecheck   # 0 errors
 npm run lint        # 0 warnings/errors
-npm test            # 58 files / 294 tests
+npm test            # 83 files / 448 tests
 npm run build       # exit 0
 ```
 
