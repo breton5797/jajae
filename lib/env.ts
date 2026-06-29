@@ -69,5 +69,6 @@ export function studioRenderModel(): string {
 }
 
 export function studioRenderQuality(): string {
-  return process.env.STUDIO_RENDER_QUALITY ?? "high";
+  // 기본 medium: 속도/비용 균형(high는 90~165초). 필요 시 STUDIO_RENDER_QUALITY=high.
+  return process.env.STUDIO_RENDER_QUALITY ?? "medium";
 }
