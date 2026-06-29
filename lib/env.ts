@@ -63,3 +63,11 @@ export function studioRenderProvider(): string | null {
 export function studioRenderApiKey(): string | null {
   return process.env.STUDIO_RENDER_API_KEY ?? null;
 }
+
+export function studioRenderModel(): string {
+  return process.env.STUDIO_RENDER_MODEL ?? "gpt-image-1";
+}
+
+export function studioRenderQuality(): string {
+  return process.env.STUDIO_RENDER_QUALITY ?? "high";
+}

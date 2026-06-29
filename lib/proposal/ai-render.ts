@@ -4,7 +4,10 @@
  * 우선순위: STUDIO_RENDER_API_KEY(+STUDIO_RENDER_PROVIDER) → OPENAI_API_KEY.
  * 키 미설정 또는 실패 시 mock 폴백(원본 3D 렌더 그대로 반환) — 기능은 항상 동작.
  */
-import { openaiApiKey, studioRenderApiKey, studioRenderProvider } from "@/lib/env";
+import {
+  openaiApiKey, studioRenderApiKey, studioRenderModel,
+  studioRenderProvider, studioRenderQuality,
+} from "@/lib/env";
 
 export interface RenderResult {
   imageUrl: string; // dataURL 또는 원격 URL
@@ -28,17 +31,26 @@ function resolveProvider(): { provider: string; key: string } | null {
   return null;
 }
 
-/** OpenAI gpt-image-1 이미지 편집(img2img). 실패 시 null. */
+/**
+ * OpenAI 이미지 편집(img2img) — gpt-image-1 계열. 실패 시 null.
+ * 스펙(POST /v1/images/edits) 준수:
+ *  - 멀티파트 필드는 `image[]`(배열), 모델은 gpt-image-1 계열.
+ *  - `input_fidelity=high`로 입력 3D 렌더의 구도/배치를 보존(구조 보존 핵심).
+ *  - gpt-image-1은 b64_json을 기본 반환(response_format 미전송).
+ *  - size는 4:3 hero에 맞춰 가로형 1536x1024.
+ */
 async function openaiEdit(
   dataUrl: string, prompt: string, key: string,
 ): Promise<string | null> {
   const b64 = dataUrl.replace(/^data:image\/\w+;base64,/, "");
   const bytes = Buffer.from(b64, "base64");
   const form = new FormData();
-  form.append("model", "gpt-image-1");
-  form.append("image", new Blob([bytes], { type: "image/png" }), "scene.png");
+  form.append("model", studioRenderModel());
+  form.append("image[]", new Blob([bytes], { type: "image/png" }), "scene.png");
   form.append("prompt", prompt);
-  form.append("size", "1024x1024");
+  form.append("size", "1536x1024");
+  form.append("input_fidelity", "high");
+  form.append("quality", studioRenderQuality());
 
   const res = await fetch("https://api.openai.com/v1/images/edits", {
     method: "POST",
