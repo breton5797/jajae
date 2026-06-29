@@ -26,6 +26,7 @@ export function PresentationView({ data }: { data: PresentationData }) {
   const [tab, setTab] = useState<"plan" | "proposal">("proposal");
   const [shareUrl, setShareUrl] = useState<string | null>(null);
   const [shareError, setShareError] = useState<string | null>(null);
+  const [snapshot, setSnapshot] = useState<string | null>(null);
   const title = `${data.template.pyeongBand}평형 인테리어 제안`;
 
   async function onShare() {
@@ -39,7 +40,7 @@ export function PresentationView({ data }: { data: PresentationData }) {
       const res = await fetch(`/api/proposal/${data.proposalId}/share`, {
         method: "POST",
         headers: { "content-type": "application/json" },
-        body: JSON.stringify({ password, expiresInDays: 7 }),
+        body: JSON.stringify({ password, expiresInDays: 7, snapshot: snapshot ?? undefined }),
       });
       if (!res.ok) {
         setShareError("공유 링크 생성에 실패했습니다.");
@@ -105,6 +106,7 @@ export function PresentationView({ data }: { data: PresentationData }) {
             constructionKRW={data.constructionKRW}
             totalKRW={data.totalKRW}
             title={title}
+            onSnapshot={setSnapshot}
           />
         ) : (
           <FloorplanSheet

@@ -24,9 +24,10 @@ describe("proposal zod schemas", () => {
     expect(r.success).toBe(false);
   });
 
-  it("ShareInputSchema: 비밀번호 4자 미만 거부", () => {
+  it("ShareInputSchema: 비밀번호 4자 미만 거부, snapshot 선택", () => {
     expect(ShareInputSchema.safeParse({ password: "12", expiresInDays: 7 }).success).toBe(false);
     expect(ShareInputSchema.safeParse({ password: "1234", expiresInDays: 7 }).success).toBe(true);
+    expect(ShareInputSchema.safeParse({ password: "1234", snapshot: "data:image/png;base64,AAAA" }).success).toBe(true);
   });
 
   it("SharedAccessSchema: 비밀번호 필수", () => {

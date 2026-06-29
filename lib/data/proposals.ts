@@ -41,13 +41,47 @@ export async function getProposalRow(id: string) {
   return data;
 }
 
+const SNAPSHOT_BUCKET = "proposal-snapshots";
+
+/** 3D 스냅샷 dataURL을 Storage에 올리고 public URL 반환(실패 시 null, best-effort). */
+async function uploadSnapshot(
+  sb: ReturnType<typeof createServerSupabase>,
+  contractorId: string,
+  id: string,
+  snapshotDataUrl: string,
+): Promise<string | null> {
+  const b64 = snapshotDataUrl.replace(/^data:image\/\w+;base64,/, "");
+  if (!b64) return null;
+  const bytes = Buffer.from(b64, "base64");
+  const path = `${contractorId}/${id}.png`;
+  const { error } = await sb.storage
+    .from(SNAPSHOT_BUCKET)
+    .upload(path, bytes, { contentType: "image/png", upsert: true });
+  if (error) return null;
+  return sb.storage.from(SNAPSHOT_BUCKET).getPublicUrl(path).data.publicUrl;
+}
+
 export async function shareProposalRow(
   id: string,
   contractorId: string,
   password: string,
   expiresInDays: number,
+  snapshotDataUrl?: string,
 ): Promise<{ token: string; expiresAt: string } | null> {
   const sb = createServerSupabase();
+
+  // 3D 스냅샷 업로드(best-effort) → snapshot_url 갱신. 실패해도 공유는 진행.
+  if (snapshotDataUrl) {
+    const url = await uploadSnapshot(sb, contractorId, id, snapshotDataUrl);
+    if (url) {
+      await sb
+        .from("proposals")
+        .update({ snapshot_url: url })
+        .eq("id", id)
+        .eq("contractor_id", contractorId);
+    }
+  }
+
   const token = globalThis.crypto.randomUUID().replace(/-/g, "");
   const expiresAt = new Date(
     Date.now() + expiresInDays * 86400000,

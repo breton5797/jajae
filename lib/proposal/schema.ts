@@ -30,6 +30,7 @@ export const ProposalInputSchema = z.object({
 export const ShareInputSchema = z.object({
   password: z.string().min(4),
   expiresInDays: z.number().int().min(1).max(90).default(7),
+  snapshot: z.string().optional(), // 3D 렌더 PNG dataURL (공유 페이지 표시용)
 });
 
 export const SharedAccessSchema = z.object({

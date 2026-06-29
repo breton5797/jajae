@@ -32,6 +32,7 @@ export async function POST(
     user.id,
     parsed.data.password,
     parsed.data.expiresInDays,
+    parsed.data.snapshot,
   );
   if (!res) {
     return NextResponse.json(
