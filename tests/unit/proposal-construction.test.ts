@@ -1,20 +1,31 @@
 import { describe, it, expect } from "vitest";
-import { constructionTotal, FINISH_SLUGS } from "@/lib/proposal/construction";
-import type { BomResult } from "@/lib/types";
+import { estimateConstruction } from "@/lib/proposal/construction";
+import { APARTMENT_TEMPLATES } from "@/lib/proposal/templates";
 
-const bom: BomResult = {
-  source: "fallback", estTotal: 0,
-  lines: [
-    { category: "바닥재", categorySlug: "flooring", item: "마루", qty: 1, unit: "m2", estUnitPrice: 50000, estPrice: 50000 },
-    { category: "철거", categorySlug: "demolition", item: "철거", qty: 1, unit: "ea", estUnitPrice: 800000, estPrice: 800000 },
-    { category: "전기", categorySlug: "electrical", item: "배선", qty: 1, unit: "ea", estUnitPrice: 500000, estPrice: 500000 },
-  ],
-};
+const T20 = APARTMENT_TEMPLATES.find((x) => x.pyeongBand === 20)!; // 59㎡, 욕실 2
 
-describe("constructionTotal", () => {
-  it("마감 카테고리(flooring) 제외하고 공정만 합산", () => {
-    expect(FINISH_SLUGS.has("flooring")).toBe(true);
-    // 800000 + 500000 (flooring 50000 제외)
-    expect(constructionTotal(bom)).toBe(1300000);
+describe("estimateConstruction", () => {
+  it("25평(59㎡) 표준 시공비는 현실적 규모(1500만~3500만)", () => {
+    const e = estimateConstruction(T20, "standard");
+    expect(e.total).toBeGreaterThan(15_000_000);
+    expect(e.total).toBeLessThan(35_000_000);
+    expect(e.lines.length).toBeGreaterThanOrEqual(5);
+    // 합계 일관성
+    expect(e.lines.reduce((s, l) => s + l.amount, 0)).toBe(e.total);
+  });
+
+  it("티어 스케일: 프리미엄 > 표준 > 실속", () => {
+    const eco = estimateConstruction(T20, "economy").total;
+    const std = estimateConstruction(T20, "standard").total;
+    const pre = estimateConstruction(T20, "premium").total;
+    expect(eco).toBeLessThan(std);
+    expect(std).toBeLessThan(pre);
+  });
+
+  it("더 큰 평형/욕실 수 → 시공비 증가", () => {
+    const t50 = APARTMENT_TEMPLATES.find((x) => x.pyeongBand === 50)!;
+    expect(estimateConstruction(t50, "standard").total).toBeGreaterThan(
+      estimateConstruction(T20, "standard").total,
+    );
   });
 });

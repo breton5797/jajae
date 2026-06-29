@@ -42,7 +42,10 @@ export function materialsTotal(sel: FinishSelection[]): number {
 }
 
 export function selectFinishes(
-  brief: EstimateBrief, template: ApartmentTemplate, catalog: FinishMaterial[],
+  brief: EstimateBrief,
+  template: ApartmentTemplate,
+  catalog: FinishMaterial[],
+  opts?: { budgetOverride?: number },
 ): FinishSelection[] {
   const baseTier = SPEC_TO_TIER[brief.specLevel];
   const categories = Array.from(new Set(catalog.map((m) => m.category))) as FinishCategory[];
@@ -66,8 +69,10 @@ export function selectFinishes(
   };
 
   let selections = build();
-  const budget = brief.budgetKRW;
-  if (budget && budget > 0) {
+  // 시공비 차감 후 자재 예산을 넘겨받으면 그것을 우선 적용(없으면 brief 예산).
+  // budget===0(시공비가 예산을 모두 소진)도 유효 제약 → 최저가로 강등. undefined만 "제약 없음".
+  const budget = opts?.budgetOverride !== undefined ? opts.budgetOverride : brief.budgetKRW;
+  if (budget !== undefined && budget !== null && budget >= 0) {
     let guard = 0;
     while (materialsTotal(selections) > budget && guard < 200) {
       const target = DOWNGRADE_ORDER.find(

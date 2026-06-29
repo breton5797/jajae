@@ -7,7 +7,7 @@ import { buildEstimate } from "@/lib/estimate";
 import { matchTemplate } from "./templates";
 import { selectFinishes, materialsTotal } from "./materials";
 import { renderPlanSvg } from "./floorplan-svg";
-import { constructionTotal } from "./construction";
+import { estimateConstruction, type ConstructionLine } from "./construction";
 import { toFurnishedScene, type FurnishedScene } from "@/lib/studio/from-floorplan";
 
 export interface BuiltProposal {
@@ -18,6 +18,7 @@ export interface BuiltProposal {
   bom: BomResult;
   materialsKRW: number;
   constructionKRW: number;
+  constructionLines: ConstructionLine[];
   totalKRW: number;
 }
 
@@ -39,16 +40,38 @@ export async function buildProposal(
     bedrooms: Math.max(1, count(brief, "room")),
     bathrooms: Math.max(1, count(brief, "bathroom")),
   });
-  const finishes = selectFinishes(brief, template, catalog.finishes);
+
+  // 시공비를 먼저 산출(사양·면적 기반) → 자재 예산 = 총예산 - 시공비 로 제약.
+  const construction = estimateConstruction(template, brief.specLevel);
+  const materialsBudget =
+    brief.budgetKRW != null && brief.budgetKRW > 0
+      ? Math.max(0, brief.budgetKRW - construction.total)
+      : undefined;
+  const finishes = selectFinishes(
+    brief,
+    template,
+    catalog.finishes,
+    materialsBudget !== undefined ? { budgetOverride: materialsBudget } : undefined,
+  );
+
   const furnishedScene = toFurnishedScene(template, finishes);
   const floorPlanSvg = renderPlanSvg(template);
   const estimate = await buildEstimate(brief, {
-    categories: catalog.categories, products: catalog.products,
+    categories: catalog.categories,
+    products: catalog.products,
   });
+
   const materialsKRW = materialsTotal(finishes);
-  const constructionKRW = constructionTotal(estimate.bom);
+  const constructionKRW = construction.total;
   return {
-    template, finishes, furnishedScene, floorPlanSvg, bom: estimate.bom,
-    materialsKRW, constructionKRW, totalKRW: materialsKRW + constructionKRW,
+    template,
+    finishes,
+    furnishedScene,
+    floorPlanSvg,
+    bom: estimate.bom,
+    materialsKRW,
+    constructionKRW,
+    constructionLines: construction.lines,
+    totalKRW: materialsKRW + constructionKRW,
   };
 }

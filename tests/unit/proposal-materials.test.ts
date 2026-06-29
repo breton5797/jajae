@@ -39,4 +39,13 @@ describe("selectFinishes", () => {
     const sel = selectFinishes(brief({ specLevel: "premium", budgetKRW: 10000 }), T, CATALOG);
     expect(sel.find((s) => s.category === "door")!.material.tier).toBe("premium");
   });
+
+  it("budgetOverride가 brief.budgetKRW보다 우선한다(시공비 차감용)", () => {
+    // brief 예산은 충분하지만 override 350 → 강등
+    const sel = selectFinishes(
+      brief({ specLevel: "standard", budgetKRW: 9_999_999 }),
+      T, CATALOG, { budgetOverride: 350 },
+    );
+    expect(sel.find((s) => s.category === "door")!.material.tier).toBe("economy");
+  });
 });
