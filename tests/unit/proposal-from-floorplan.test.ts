@@ -17,10 +17,20 @@ describe("toFurnishedScene", () => {
     expect(s.floorColor).toBe("#B98C5A");
     expect(s.wallColor).toBe("#E6E3DC");
   });
-  it("템플릿 가구 assetId를 ASSETS로 해석 (알 수 없는 id 제외)", () => {
+  it("템플릿 가구는 보존하고 빈 거주방은 가구로 채운다(enrich)", () => {
     const s = toFurnishedScene(T, finishes);
-    expect(s.furniture.length).toBe(T.furniture.length); // 모두 유효 id(sofa/table/bed)
+    // 템플릿 가구(유효 id) 이상으로 늘어난다
+    expect(s.furniture.length).toBeGreaterThanOrEqual(T.furniture.length);
     expect(s.furniture[0]!.asset.id).toBeTruthy();
+    // 모든 거주방(거실/방/주방)은 자기 영역 안에 가구가 1개 이상
+    const habitable = T.rooms.filter((r) => r.type === "living" || r.type === "room" || r.type === "kitchen");
+    for (const room of habitable) {
+      const inside = s.furniture.some((f) => {
+        const [x, , z] = f.transform.position;
+        return x >= room.x && x <= room.x + room.w && z >= room.y && z <= room.y + room.h;
+      });
+      expect(inside, `${room.name} 가구 없음`).toBe(true);
+    }
   });
   it("rooms·치수 그대로 전달", () => {
     const s = toFurnishedScene(T, finishes);
