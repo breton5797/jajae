@@ -17,4 +17,11 @@ describe("renderPlanSvg", () => {
     expect(svg).toContain(`${T.exclusiveM2}`);
     expect(svg).toContain("공급면적");
   });
+  it("룸 타입별 가구 아이콘 포함(침대/소파/주방/욕실)", () => {
+    const svg = renderPlanSvg(T);
+    expect(svg).toContain('data-furniture="bed"'); // 침실
+    expect(svg).toContain('data-furniture="sofa"'); // 거실
+    expect(svg).toContain('data-furniture="kitchen"'); // 주방/식당
+    expect(svg).toContain('data-furniture="bath"'); // 욕실
+  });
 });
