@@ -55,6 +55,10 @@ describe("floorPlanToDesignScene", () => {
     expect(northWall.transform.rotation[1]).toBe(0);
     expect(northWall.transform.scale[0]).toBe(2); // widthM/4 = 8/4
 
+    // 외벽은 무릎높이(내부 가림 방지) — y 스케일로 0.5m까지 낮춘다. wall 에셋 높이=3m.
+    expect(northWall.transform.scale[1]).toBeCloseTo(0.5 / 3);
+    expect(northWall.transform.scale[1]).toBeLessThan(1);
+
     // z축 벽(E/W)은 90도 회전 + 길이에 맞춰 스케일
     const westWall = walls.find((w) => w.transform.position[0] === -4)!;
     expect(westWall.transform.rotation[1]).toBeCloseTo(Math.PI / 2);
