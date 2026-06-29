@@ -13,6 +13,7 @@ import { useState } from "react";
 import type { FinishSelection } from "@/lib/types";
 import type { FurnishedScene } from "@/lib/studio/from-floorplan";
 import { MaterialPanel } from "./material-panel";
+import { YeongnimMatch } from "./yeongnim-match";
 
 const ProposalCanvas = dynamic(
   () => import("./proposal-canvas").then((m) => m.ProposalCanvas),
@@ -149,6 +150,7 @@ export function ProposalSheet({
           </li>
         ))}
       </ul>
+      <YeongnimMatch />
     </div>
   );
 }
