@@ -20,6 +20,10 @@ const FLOOR_COLOR = "#C7A878";
 const FLOOR_THICKNESS = 0.1;
 /** wall 에셋의 기본 x 길이(m) — 경계 외벽 스케일 계산 기준(assets.ts wall box size[0]). */
 const WALL_UNIT = 4;
+/** wall 에셋의 기본 높이(m) — assets.ts wall box size[1]. */
+const WALL_ASSET_HEIGHT = 3;
+/** 경계 외벽 표시 높이(m) — 무릎높이로 낮춰 부감 시 내부 룸/가구를 가리지 않게 한다. */
+const WALL_HEIGHT_M = 0.5;
 
 const identityScale = (): [number, number, number] => [1, 1, 1];
 const noRotation = (): [number, number, number] => [0, 0, 0];
@@ -85,6 +89,7 @@ export function floorPlanToDesignScene(floorPlan: FloorPlan): DesignScene {
     { pos: [-widthM / 2, 0, 0], rotY: Math.PI / 2, len: WALL_L }, // West
     { pos: [widthM / 2, 0, 0], rotY: Math.PI / 2, len: WALL_L }, // East
   ];
+  const wallHeightScale = WALL_HEIGHT_M / WALL_ASSET_HEIGHT;
   for (const w of perimeter) {
     objects.push({
       id: nextId(),
@@ -93,7 +98,7 @@ export function floorPlanToDesignScene(floorPlan: FloorPlan): DesignScene {
       transform: {
         position: w.pos,
         rotation: [0, w.rotY, 0],
-        scale: [w.len, 1, 1],
+        scale: [w.len, wallHeightScale, 1],
       },
     });
   }
